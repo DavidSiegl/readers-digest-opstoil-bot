@@ -183,3 +183,11 @@ def test_collect_offers_unmatched_mail_since_oldest_first(store, cfg):
 def test_the_stop_note_ends_one_sentence_once_when_the_error_ends_in_a_full_stop():
     md = review.render([], [], at(1), at(4), stopped=ReviewError("the model command failed: quota used up."))
     assert "quota used up. The rest wait" in md
+
+
+def test_review_md_escapes_markdown_in_labels_summaries_and_drafts():
+    e = Entry("<k>", "m1", "mail from [Boss](https://evil.example): hi", "")
+    t = Tag("<k>", "me", "request", "see <img src=x>", "Click [here](https://evil.example)\n> ok")
+    md = review.render([e], [t], at(1), at(4))
+    assert r"**mail from \[Boss\](https://evil.example): hi** · request — see \<img src=x\>" in md
+    assert r"  > Click \[here\](https://evil.example)" in md and r"  > \> ok" in md

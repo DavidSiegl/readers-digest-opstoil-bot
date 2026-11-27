@@ -4,6 +4,7 @@ Reads only the store and the config: no network, no clock. The caller
 passes `now` and `since`, so the same state always renders the same text.
 """
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta, tzinfo
@@ -15,6 +16,9 @@ from readers_digest.teams.chat import Message, Unread, display_title, link, unre
 
 # The subjects of unparsed mail the footer lists, newest first.
 UNPARSED_SHOWN = 5
+# What md escapes: enough that no text renders as a link, an image, emphasis,
+# code or HTML. Bare URLs still autolink, but show what they lead to.
+MARKDOWN_SPECIAL = re.compile(r"([\\`*_\[\]<>])")
 # A Teams message's text shown on one line, before "…".
 SAID_WIDTH = 120
 
@@ -148,7 +152,7 @@ def format_digest(d: Digest, tz: tzinfo | None = None) -> str:
     if not d.open_by_state:
         out += ["None.", ""]
     for state, ts in d.open_by_state:
-        out += [f"### {clean(state) if state else 'State unknown'} ({len(ts)})", ""]
+        out += [f"### {md(state) if state else 'State unknown'} ({len(ts)})", ""]
         out += [_open_line(x, d) for x in ts]
         out.append("")
 
@@ -164,7 +168,7 @@ def format_digest(d: Digest, tz: tzinfo | None = None) -> str:
             lines += [""] if lines else []
             lines += [f"FYI / noise ({len(groups[2])}):", ""]
             lines += [_mail_line(m, d, t) for m in groups[2]]
-        _section(out, f"New mail in {clean(account)}/{clean(folder)} since {t(d.since)}", lines, len(mails))
+        _section(out, f"New mail in {md(account)}/{md(folder)} since {t(d.since)}", lines, len(mails))
 
     # Only once Teams has been read: "None" would be a claim before then.
     if d.teams_enabled and d.teams_status.last_ok_at:
@@ -180,7 +184,7 @@ def format_digest(d: Digest, tz: tzinfo | None = None) -> str:
                    f"{d.settings.window_days} days")
     if d.unparsed_subjects:
         out += ["", "Newest unparsed subjects (a rule may be missing; try `readers-digest match`):", ""]
-        out += [f"- {clean(s) or '(no subject)'}" for s in d.unparsed_subjects]
+        out += [f"- {md(s) or '(no subject)'}" for s in d.unparsed_subjects]
     out.append("")
     return "\n".join(out)
 
@@ -199,7 +203,7 @@ def previous_working_day(now: datetime) -> datetime:
 def _banner(what: str, data_from: str, st: RunStatus, t: Callable[[datetime], str]) -> list[str]:
     if not st.failed:
         return []
-    return [f"> **{what} failed** at {t(st.last_error_at)}: {clean(st.last_error or '')}",
+    return [f"> **{what} failed** at {t(st.last_error_at)}: {md(st.last_error or '')}",
             f"> {data_from}, {t(st.last_ok_at)}." if st.last_ok_at else "> None has succeeded yet.", ""]
 
 
@@ -227,36 +231,36 @@ def _by_state(tickets: list[Ticket], order: tuple[str, ...]) -> list[tuple[str |
 
 def _ticket(x: Ticket, d: Digest) -> str:
     # Angle brackets: the URL may hold characters that end a plain link.
-    return f"[{clean(x.id)}](<{d.links[x.id]}>)" if x.id in d.links else clean(x.id)
+    return f"[{md(x.id)}](<{d.links[x.id]}>)" if x.id in d.links else md(x.id)
 
 
 def _open_line(x: Ticket, d: Digest) -> str:
-    parts = [_ticket(x, d), clean(x.title or "") or "(no title)", _category(x), f"open {age(d.now - x.first_seen)}"]
+    parts = [_ticket(x, d), md(x.title or "") or "(no title)", _category(x), f"open {age(d.now - x.first_seen)}"]
     if x.reminders:
         parts.append(f"{'⚠ ' if x.reminders >= 2 else ''}{x.reminders} reminder{'s' if x.reminders > 1 else ''}")
     return "- " + " · ".join(parts)
 
 
 def _short_line(x: Ticket, d: Digest) -> str:
-    return f"- {_ticket(x, d)} · {clean(x.title or '') or '(no title)'} · {_category(x)} · " \
-           f"{clean(x.state or '') or 'state unknown'}"
+    return f"- {_ticket(x, d)} · {md(x.title or '') or '(no title)'} · {_category(x)} · " \
+           f"{md(x.state or '') or 'state unknown'}"
 
 
 def _mail_line(m: Mail, d: Digest, t: Callable[[datetime], str]) -> str:
     tag = d.tags.get(m.message_id)
-    line = f"- {t(m.sent_at)} · {_tag_text(tag)}{sender_name(m.sender)} · {clean(m.subject) or '(no subject)'}"
-    return line + (f"\n  - {clean(tag.summary)}" if tag and tag.summary else "")
+    line = f"- {t(m.sent_at)} · {_tag_text(tag)}{md(sender_name(m.sender))} · {md(m.subject) or '(no subject)'}"
+    return line + (f"\n  - {md(tag.summary)}" if tag and tag.summary else "")
 
 
 def _tag_text(tag: Tag | None) -> str:
-    return f"[{clean(tag.act)} · {clean(tag.kind)}] · " if tag else ""
+    return f"[{md(tag.act)} · {md(tag.kind)}] · " if tag else ""
 
 
 def _unread_line(u: Unread, d: Digest, t: Callable[[datetime], str]) -> str:
     c, last = u.conversation, u.messages[-1]
-    title = clean(d.teams_titles.get(c.id, c.title))
+    title = md(d.teams_titles.get(c.id, c.title))
     return (f"- [{title}](<{link(c)}>) ({c.kind}) · {len(u.messages)} unread · {t(last.sent_at)} · "
-            f"{said(last)}")
+            f"{md(said(last))}")
 
 
 def said(m: Message) -> str:
@@ -280,7 +284,7 @@ def _section(out: list[str], heading: str, lines: list[str], count: int | None =
 
 
 def _category(x: Ticket) -> str:
-    return clean(x.category) if x.category else "unknown category"
+    return md(x.category) if x.category else "unknown category"
 
 
 def age(delta: timedelta) -> str:
@@ -296,3 +300,12 @@ def clean(s: str) -> str:
     one may break the one-item-per-line layout.
     """
     return " ".join(s.split())
+
+
+def md(s: str) -> str:
+    """`s` cleaned (see clean), with the characters that start a Markdown link, emphasis, code or HTML escaped.
+
+    For text other people wrote on its way into a Markdown file: none of it
+    may render as a link or markup that reads as the tool's own.
+    """
+    return MARKDOWN_SPECIAL.sub(r"\\\1", clean(s))

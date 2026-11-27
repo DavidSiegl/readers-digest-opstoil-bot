@@ -21,7 +21,7 @@ from datetime import datetime, tzinfo
 
 from readers_digest import failure_line
 from readers_digest.config import Config, ReviewSettings
-from readers_digest.digest import clean, sender_name
+from readers_digest.digest import clean, md, sender_name
 from readers_digest.store import Source, Store, Tag
 from readers_digest.teams.chat import Conversation, Message, display_title, review_key, to_me, unread
 
@@ -253,7 +253,7 @@ def render(entries: list[Entry], tags: list[Tag], since: datetime, now: datetime
     by_key = {x.key: x for x in tags}
     out = [f"# Review, {t(now)}", "", f"{len(entries)} new entries since {t(since)}.", ""]
     if stopped is not None:
-        out += [f"Stopped after {len(by_key)} of {len(entries)}: {failure_line(stopped).rstrip('.')}."
+        out += [f"Stopped after {len(by_key)} of {len(entries)}: {md(failure_line(stopped)).rstrip('.')}."
                 " The rest wait for the next review.", ""]
     out += ["> Written by a language model from text other people wrote. Check it against the source before acting.",
             ""]
@@ -261,9 +261,9 @@ def render(entries: list[Entry], tags: list[Tag], since: datetime, now: datetime
         these = [(e, by_key[e.key]) for e in entries if e.key in by_key and by_key[e.key].act == act]
         out += [f"## {heading} ({len(these)})", ""]
         for e, x in these:
-            out.append(f"- **{clean(e.label)}** · {x.kind}" + (f" — {x.summary}" if x.summary else ""))
+            out.append(f"- **{md(e.label)}** · {x.kind}" + (f" — {md(x.summary)}" if x.summary else ""))
             if x.draft:
-                out += ["", "  Draft:", "", *(f"  > {line}".rstrip() for line in x.draft.splitlines()), ""]
+                out += ["", "  Draft:", "", *(f"  > {md(line)}".rstrip() for line in x.draft.splitlines()), ""]
         out += [] if these else ["None."]
         out.append("")
     return "\n".join(out)

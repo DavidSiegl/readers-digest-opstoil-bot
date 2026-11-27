@@ -30,9 +30,10 @@ tries again: TODO.md, Open issues), and a Teams
 login that needs a password stops the run instead of typing one.
 
 **All input is untrusted.** Subjects, names, mail bodies and chat messages
-are written by other people. `digest.clean` puts each on one line before it
-reaches Markdown; the window shows text with markup off; the tray escapes
-its tooltip. The review prompt fences entries as data, and the model's
+are written by other people. `digest.md` puts each on one line and escapes
+what would make a link or markup before it reaches digest.md or
+review.md; the window shows text with markup off; the tray escapes its
+tooltip and the desktop notification its body. The review prompt fences entries as data, and the model's
 answer must be JSON of a fixed shape that `review.check` validates before
 anything is stored. Nothing a model writes is run or sent.
 

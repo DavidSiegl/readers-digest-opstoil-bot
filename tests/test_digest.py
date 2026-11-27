@@ -160,3 +160,12 @@ def test_format_digest_renders_every_section(store):
                     " · Last Teams read: 2026-11-03 10:00", "- Weekly report"]:
         assert heading in text, heading
     assert text.endswith("\n")
+
+
+def test_text_from_others_cannot_make_a_link_or_markup_in_the_digest(store, cfg):
+    store.record([mail("[Reset your password](https://phish.example) <b>now</b>", at(3), "<p@x>", folder="INBOX",
+                       sender="Mallory_* <m@example.com>")])
+    text = format_digest(collect(store, cfg, at(1), at(5)), UTC)
+    line = next(x for x in text.splitlines() if "Reset" in x)
+    assert line == (r"- 2026-11-03 10:00 · Mallory\_\* · \[Reset your password\](https://phish.example) "
+                    r"\<b\>now\</b\>")
