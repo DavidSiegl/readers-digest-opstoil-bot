@@ -45,7 +45,7 @@ class Security(StrEnum):
 class Folder:
     """One IMAP folder an account reads, and what kind of mail it holds."""
 
-    name: str  # the IMAP mailbox name, as the server lists it
+    name: str  # the IMAP mailbox name as a mail client shows it, not modified-UTF-7 encoded
     role: Role
 
 

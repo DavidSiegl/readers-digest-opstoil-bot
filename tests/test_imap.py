@@ -415,3 +415,24 @@ def test_encoded_words_are_decoded_beside_any_text(cfg, subject, decoded):
     server = FakeServer({"Tickets": {1: msg(1, subject=subject)}})
     [m] = by_folder(run(server, cfg))["Tickets"].mails
     assert m.subject == decoded
+
+
+def test_folder_names_go_out_in_modified_utf7():
+    assert imap.quote_mailbox("~peter/mail/台北/日本語") == '"~peter/mail/&U,BTFw-/&ZeVnLIqe-"'  # RFC 3501 5.1.3
+    assert imap.quote_mailbox('Éléments envoyés & "co"') == '"&AMk-l&AOk-ments envoy&AOk-s &- \\"co\\""'
+
+
+def test_a_non_ascii_folder_is_examined_by_its_encoded_name(cfg):
+    from readers_digest.config import Folder, Role
+    server = FakeServer({"Entw&APw-rfe": {}})
+    account = replace(cfg.accounts[0], folders=(Folder("Entwürfe", Role.MAIL),))
+    fetch(account, PASSWORD, {}, TODAY, cfg.sync, connect=lambda a, t: FakeIMAP(server))
+    assert 'EXAMINE "Entw&APw-rfe"' in server.commands
+
+
+def test_a_non_ascii_user_is_refused_before_login(cfg):
+    server = FakeServer()
+    account = replace(cfg.accounts[0], user="jürgen@example.com")
+    with pytest.raises(SourceError, match="not ASCII"):
+        fetch(account, PASSWORD, {}, TODAY, cfg.sync, connect=lambda a, t: FakeIMAP(server))
+    assert not any(verb(c) == "LOGIN" for c in server.commands)

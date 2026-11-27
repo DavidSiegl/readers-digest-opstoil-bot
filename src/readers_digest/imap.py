@@ -6,6 +6,7 @@ of RFC822.SIZE and BODY.PEEK (never BODY, which sets \\Seen), and LOGOUT.
 Nothing it does changes a flag, moves a mail or shows in another client.
 """
 
+import base64
 import email
 import email.policy
 import hashlib
@@ -157,6 +158,8 @@ def _login(m: imaplib.IMAP4, a: Account, password: str) -> None:
     """session's LOGIN; raises SourceError as session says."""
     # imaplib sends LOGIN arguments as ASCII. Checked here because its
     # UnicodeEncodeError would quote the offending character of the password.
+    if not a.user.isascii():
+        raise SourceError("IMAP", f"{a.name}: the user {a.user!r} is not ASCII, which IMAP LOGIN cannot send")
     if not password.isascii():
         raise SourceError("password", f"{a.name}: the password is not ASCII, which IMAP LOGIN cannot send")
     try:
@@ -361,5 +364,16 @@ def _imap_date(d: date) -> str:
 
 
 def quote_mailbox(mailbox: str) -> str:
-    """`mailbox` as an IMAP quoted string, for EXAMINE."""
-    return '"' + mailbox.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    """`mailbox`, a name as a mail client shows it, as the IMAP quoted string EXAMINE takes.
+
+    Encoded in IMAP's modified UTF-7 (RFC 3501, 5.1.3), so any name can be
+    sent: imaplib sends arguments as ASCII.
+    """
+    def encode(m: re.Match) -> str:
+        if m[0] == "&":
+            return "&-"
+        b64 = base64.b64encode(m[0].encode("utf-16-be")).decode().rstrip("=").replace("/", ",")
+        return f"&{b64}-"
+
+    utf7 = re.sub(r"&|[^\x20-\x7e]+", encode, mailbox)
+    return '"' + utf7.replace("\\", "\\\\").replace('"', '\\"') + '"'
