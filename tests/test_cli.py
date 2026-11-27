@@ -1,10 +1,12 @@
 import importlib.util
 import os
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from conftest import CONFIG, at, mail
 
 from readers_digest import cli
+from readers_digest.config import SyncSettings
 from readers_digest.store import Store
 
 
@@ -104,11 +106,11 @@ def test_a_sync_that_finds_the_lock_busy_touches_nothing(home, capsys, monkeypat
     assert "nothing done" in capsys.readouterr().err
 
 
-def test_a_sync_that_gets_the_lock_expires_old_text(home, monkeypatch):
-    from readers_digest.store import Store as RealStore
-
+def test_a_sync_that_gets_the_lock_expires_text_older_than_retention_days(home, monkeypatch):
     expired = []
-    monkeypatch.setattr(RealStore, "expire_text", lambda self, before: expired.append(before) or 0)
+    monkeypatch.setattr(Store, "expire_text", lambda self, before: expired.append(before) or 0)
     monkeypatch.setattr(cli, "sync", lambda *a, **k: 0)
+    start = datetime.now(UTC)
     assert main(home, "sync", "--no-teams") == 0
-    assert len(expired) == 1
+    retention = timedelta(days=SyncSettings().retention_days)
+    assert len(expired) == 1 and start - retention <= expired[0] <= datetime.now(UTC) - retention

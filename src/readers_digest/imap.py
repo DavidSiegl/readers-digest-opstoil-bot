@@ -333,13 +333,15 @@ class _RawHeaders(email.policy.Compat32):
 _RAW_HEADERS = _RawHeaders()
 
 
-def _decode(field: str) -> str:
-    """A header's text: RFC 2047 words decoded, raw 8-bit bytes read as UTF-8, folding removed.
+def _decode(header: str) -> str:
+    """A header's text, folding removed: RFC 2047 words decoded in their charset, other 8-bit bytes read as UTF-8.
 
-    `field` is a header as _RAW_HEADERS fetches it. Undecodable bytes and
-    encoded words become replacement marks; nothing raises.
+    `header` is a header as _RAW_HEADERS fetches it. Never raises: invalid
+    UTF-8 becomes U+FFFD, a word in an unknown charset is read as ASCII, a
+    malformed word stays as its literal text, and a base64 word that does
+    not decode is dropped.
     """
-    b = field.encode("ascii", "surrogateescape")
+    b = header.encode("ascii", "surrogateescape")
     # RFC 2047 forbids 8-bit bytes in an encoded word, but mailers send them.
     # Written as =XX, they decode with the word in its own charset.
     b = _Q_WORD.sub(lambda w: re.sub(rb"[\x80-\xff]", lambda c: b"=%02X" % c[0][0], w[0]), b)
