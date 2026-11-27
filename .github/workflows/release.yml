@@ -4,6 +4,15 @@ name: Release
 # sdist and wheel attached and, as notes, the subjects of the commits since
 # the previous v* tag (GitHub's generated notes list merged pull requests,
 # and this repo has none).
+#
+# To release, set the version with `uv version`, which writes it to both
+# pyproject.toml and uv.lock (an edit of pyproject.toml alone leaves the lock
+# stale, and `uv sync --locked` below refuses it), commit both, and push the
+# commit and its tag:
+#
+#   uv version 0.2.0
+#   git commit -m "Release 0.2.0" pyproject.toml uv.lock
+#   git tag -a v0.2.0 -m "readers-digest 0.2.0" && git push origin main v0.2.0
 
 on:
   push:
@@ -45,7 +54,8 @@ jobs:
           path: dist/
           if-no-files-found: error
 
-  # Holds the write token and runs nothing but git, gh and the artifact download.
+  # Holds the write token and runs nothing of the project's: checkout, the
+  # artifact download, git and gh.
   publish:
     needs: build
     runs-on: ubuntu-latest

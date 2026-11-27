@@ -281,32 +281,6 @@ cp contrib/desktop/readers-digest-autostart.desktop ~/.config/autostart/
 If the launcher does nothing, its PATH lacks `~/.local/bin`: put the full
 path to `readers-digest` in the entry's `Exec=`.
 
-## Development
-
-```sh
-uv sync
-uv run pytest
-uv run ruff check src tests
-```
-
-[ARCHITECTURE.md](ARCHITECTURE.md) explains how it is put together, and
-[TODO.md](TODO.md) what it does not do yet.
-
-To release, set the new version with `uv version`, which writes it to
-both `pyproject.toml` and `uv.lock` (an edit of `pyproject.toml` alone
-leaves the lock stale, and CI's `uv sync --locked` refuses it), commit
-both, then tag that commit `v` plus the version and push the tag:
-
-```sh
-uv version 0.2.0
-git commit -m "Release 0.2.0" pyproject.toml uv.lock
-git tag -a v0.2.0 -m "readers-digest 0.2.0" && git push origin main v0.2.0
-```
-
-[`release.yml`](.github/workflows/release.yml) then tests the tagged
-commit, checks the tag against `pyproject.toml`, and publishes the GitHub
-release with the sdist and the wheel.
-
 ## License
 
 MIT, see [LICENSE](LICENSE).
