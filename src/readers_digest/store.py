@@ -136,9 +136,11 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
-# PRAGMA user_version of a db this code made. A change to a table of SCHEMA
-# needs this raised and a step that takes an older db there, run by _upgrade;
-# tables that are only added need neither, since SCHEMA creates them anywhere.
+# PRAGMA user_version of a db this code made. Every change to SCHEMA needs
+# this raised, an added table or index too: an open that finds this version
+# runs none of SCHEMA. A change to a table that exists also needs a step in
+# _upgrade that takes an older db's rows there; an added one needs none, since
+# _upgrade runs SCHEMA on any older db.
 SCHEMA_VERSION = 1
 
 
