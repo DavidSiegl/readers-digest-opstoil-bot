@@ -32,3 +32,27 @@ Features a fuller version could have; none is started.
   on other hosts or paths." The README now says only what is enforced.
   Closed by blocking every non-GET to Teams hosts except what sign-in and
   token refresh need, found with `teams-probe` against a real tenant.
+- **A ticket's state must be in its subject.** The rules read only
+  Subject and From, and a `tickets` folder's text is never fetched: the
+  shape of the change-ticket subjects this tool was first written for,
+  which name id, state and category. Most trackers do not: GitHub, GitLab and Jira
+  Cloud put a state change in the body ("Closed #12 as completed"), and
+  Bugzilla and Redmine in headers (`X-Bugzilla-Status`,
+  `X-Redmine-Issue-Status`). With those, every ticket stays open until
+  `window_days` hides it. The example config's Jira rule reads a
+  " - status changed to Done" suffix Jira does not send. Closed by rules
+  that can also match named headers and the head of the body, with that
+  text kept for re-matching (`retention_days` would otherwise stop a rule
+  change from re-reading the past).
+- **Ticket ids from different trackers collide.** `ticket.id` is the
+  bare id a rule read, so helpdesk request 12 and GitHub issue 12 fold
+  into one ticket, as do issue 12 of two repos. The tracker this tool was
+  first written for numbers tickets across the whole system, so it never
+  met this. Closed by keying a
+  ticket by the tracker it is in plus its id, and letting `url` use every
+  named group (a GitHub link needs the repo as well as the number).
+- **Focus means category.** `[digest] focus` filters on the queue or
+  group, which in the tracker this tool was first written for is who has
+  to act. In Jira or GitHub the
+  project says little; the assignee says who has to act. Closed, if wanted,
+  by an `assignee` group that focus can also match.
