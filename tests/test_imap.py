@@ -399,7 +399,19 @@ def test_read_password_failures_are_password_errors(run):
     assert e.value.component == "password"
 
 
-def test_a_raw_8bit_subject_still_has_its_encoded_words_decoded(cfg):
-    server = FakeServer({"Tickets": {1: msg(1, subject="=?utf-8?q?Ticket_=5BT-1=5D?= Grüße")}})
+@pytest.mark.parametrize("subject, decoded", [
+    ("=?utf-8?q?Ticket_=5BT-1=5D?= Grüße", "Ticket [T-1] Grüße"),
+    ("=?utf-8?q?Ticket_=5BT-1=5D?= € 5", "Ticket [T-1] € 5"),
+    ("=?utf-8?q?Gr=C3=BC=C3=9Fe?= Grüße", "Grüße Grüße"),
+    # 8-bit UTF-8 inside an encoded word, which RFC 2047 forbids but mailers send.
+    ("=?utf-8?q?Grüße?= x", "Grüße x"),
+    ("=?utf-8?q?€_5?= x", "€ 5 x"),
+    # A backslash beside an encoded word is text, not an escape.
+    (r"=?utf-8?q?Ticket_=5BT-1=5D?= see C:\users\bob", r"Ticket [T-1] see C:\users\bob"),
+    (r"=?utf-8?q?Ticket?= path \u0041 Grüße", r"Ticket path \u0041 Grüße"),
+], ids=["8bit-latin1-beside", "8bit-above-ff-beside", "8bit-and-encoded", "8bit-inside-word",
+        "8bit-above-ff-inside", "ascii-backslash", "8bit-backslash"])
+def test_encoded_words_are_decoded_beside_any_text(cfg, subject, decoded):
+    server = FakeServer({"Tickets": {1: msg(1, subject=subject)}})
     [m] = by_folder(run(server, cfg))["Tickets"].mails
-    assert m.subject == "Ticket [T-1] Grüße"
+    assert m.subject == decoded

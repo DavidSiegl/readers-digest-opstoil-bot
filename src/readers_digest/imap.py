@@ -17,8 +17,7 @@ from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
-from email.errors import HeaderParseError, MessageError
-from email.header import Header, decode_header
+from email.errors import MessageError
 from email.message import Message
 from email.utils import parsedate_to_datetime
 
@@ -35,6 +34,8 @@ BODY_CHUNK = 20
 _MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 _UID = re.compile(rb"\bUID (\d+)")
 _SIZE = re.compile(rb"\bRFC822\.SIZE (\d+)")
+# An RFC 2047 Q-encoded word, its text matched as raw bytes so that 8-bit ones are part of it.
+_Q_WORD = re.compile(rb"=\?[^?\s]+\?[qQ]\?[^?\s]*\?=")
 
 
 class SourceError(Exception):
@@ -263,9 +264,7 @@ def _fetched_literals(data: list) -> list[tuple[int, bytes, bytes]]:
 
 def _headers(raw: bytes, account: str, f: Folder) -> tuple[Mail | None, str]:
     """(the mail its headers describe, without text; or None and why it cannot be read)."""
-    # compat32 hands back a header with raw 8-bit bytes in it as a Header,
-    # not a str, so every header goes through _decode.
-    msg = email.message_from_bytes(raw, policy=email.policy.compat32)
+    msg = email.message_from_bytes(raw, policy=_RAW_HEADERS)
     subject = _decode(msg.get("Subject", ""))
     sender = _decode(msg.get("From", ""))
     date = _decode(msg.get("Date", ""))
@@ -279,7 +278,7 @@ def _headers(raw: bytes, account: str, f: Folder) -> tuple[Mail | None, str]:
     message_id = _decode(msg.get("Message-ID", "")).strip()
     if not message_id:
         # Stable across runs and across UID renumbering, so dedup still works.
-        h = hashlib.sha256(f"{sent_at.isoformat()}\0{msg.get('From', '')}\0{subject}".encode()).hexdigest()
+        h = hashlib.sha256(f"{sent_at.isoformat()}\0{sender}\0{subject}".encode()).hexdigest()
         message_id = f"<{h[:32]}@no-message-id.invalid>"
     return Mail(message_id, account, f.name, f.role.value, sent_at, sender, subject), ""
 
@@ -320,29 +319,32 @@ def _part_text(part: Message) -> str:
         return payload.decode("utf-8", errors="replace")
 
 
-def _decode(header: str | Header) -> str:
-    """A header's text: RFC 2047 words decoded, raw 8-bit bytes read as UTF-8, folding removed."""
-    if isinstance(header, Header):
-        # Raw 8-bit bytes, which RFC 5322 forbids but mailers send; their
-        # charset is unknown-8bit, and in practice UTF-8. Made a str first,
-        # so that encoded words beside them are decoded below too.
-        header = "".join(_text(b, cs) for b, cs in decode_header(header))
-    unfolded = re.sub(r"\r?\n", "", str(header))
-    try:
-        parts = decode_header(unfolded)
-    except HeaderParseError:
-        return unfolded  # kept undecoded: no rule will match it, so it shows as unparsed or as mail
-    # decode_header gives the text between encoded words as raw-unicode-escape bytes, with no charset.
-    return "".join(_text(b, cs or "raw-unicode-escape") for b, cs in parts)
+class _RawHeaders(email.policy.Compat32):
+    """compat32, except that a header is fetched as the str it was parsed into.
+
+    compat32 would wrap a header holding raw 8-bit bytes in a Header; here
+    those bytes stay in the str as surrogate escapes, for _decode to read.
+    """
+
+    def header_fetch_parse(self, name: str, value: str) -> str:
+        return value
 
 
-def _text(b: bytes | str, charset: str | None) -> str:
-    if isinstance(b, str):
-        return b
-    try:
-        return b.decode(charset if charset and charset != "unknown-8bit" else "utf-8", errors="replace")
-    except LookupError:
-        return b.decode("utf-8", errors="replace")
+_RAW_HEADERS = _RawHeaders()
+
+
+def _decode(field: str) -> str:
+    """A header's text: RFC 2047 words decoded, raw 8-bit bytes read as UTF-8, folding removed.
+
+    `field` is a header as _RAW_HEADERS fetches it. Undecodable bytes and
+    encoded words become replacement marks; nothing raises.
+    """
+    b = field.encode("ascii", "surrogateescape")
+    # RFC 2047 forbids 8-bit bytes in an encoded word, but mailers send them.
+    # Written as =XX, they decode with the word in its own charset.
+    b = _Q_WORD.sub(lambda w: re.sub(rb"[\x80-\xff]", lambda c: b"=%02X" % c[0][0], w[0]), b)
+    unfolded = re.sub(r"\r?\n", "", b.decode("utf-8", errors="replace"))
+    return str(email.policy.default.header_factory("unstructured", unfolded))
 
 
 def require_ok(typ: str, data: list, what: str) -> None:
