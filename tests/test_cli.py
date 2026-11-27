@@ -114,3 +114,11 @@ def test_a_sync_that_gets_the_lock_expires_text_older_than_retention_days(home, 
     assert main(home, "sync", "--no-teams") == 0
     retention = timedelta(days=3)
     assert len(expired) == 1 and start - retention <= expired[0] <= datetime.now(UTC) - retention
+
+
+def test_a_browser_driver_error_says_it_came_from_the_browser():
+    from readers_digest import failure_line
+
+    PlaywrightError = type("Error", (Exception,), {"__module__": "playwright._impl._errors"})
+    assert failure_line(PlaywrightError("Target closed\ncall log: ...")) == "browser: Target closed"
+    assert failure_line(OSError("disk full")) == "disk full"

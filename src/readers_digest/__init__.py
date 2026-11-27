@@ -19,5 +19,10 @@ EXIT_FAILED = 1
 
 
 def failure_line(e: BaseException) -> str:
-    """`e` as one line for stderr or a digest banner: its first line, or its type's name if it has no text."""
-    return str(e).splitlines()[0] if str(e) else type(e).__name__
+    """`e` as one line for stderr or a digest banner: its first line, or its type's name if it has no text.
+
+    An error of the browser driver (Playwright) gets a "browser: " prefix,
+    since its text alone does not say which part failed.
+    """
+    text = str(e).splitlines()[0] if str(e) else type(e).__name__
+    return f"browser: {text}" if type(e).__module__.startswith("playwright") else text
