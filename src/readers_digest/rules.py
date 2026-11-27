@@ -18,6 +18,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
+from email.utils import parseaddr
 from enum import StrEnum
 
 
@@ -82,9 +83,14 @@ class Rules:
         self.rules = tuple(rules)
 
     def match(self, subject: str, sender: str = "") -> Match | None:
-        """What the first rule matching `subject` and `sender` (a bare address) reads from it; None if none does."""
+        """What the first rule matching `subject` and `sender` reads from it; None if none does.
+
+        `sender` is a From: header as the mail has it ("Name <addr>") or a
+        bare address; a rule's sender pattern sees only its address, lower-case.
+        """
+        address = parseaddr(sender)[1].lower() or sender.strip().lower()
         for r in self.rules:
-            if r.sender is not None and not r.sender.search(sender):
+            if r.sender is not None and not r.sender.search(address):
                 continue
             m = r.subject.search(subject)
             if m is None or not m["ticket"]:

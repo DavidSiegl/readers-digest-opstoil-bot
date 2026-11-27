@@ -26,6 +26,7 @@ def test_sender_pattern_must_match_too():
     rules = Rules([rule(sender=re.compile(r"@tracker\.example$"))])
     assert rules.match("[T-1] x", "bot@tracker.example") is not None
     assert rules.match("[T-1] x", "someone@else.example") is None
+    assert rules.match("[T-1] x", "Tracker Bot <BOT@Tracker.example>") is not None
 
 
 def test_empty_group_counts_as_absent():

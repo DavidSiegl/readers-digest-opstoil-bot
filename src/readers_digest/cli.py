@@ -63,7 +63,8 @@ def main(argv: list[str] | None = None) -> int:
 
     m = sub.add_parser("match", help="say which rule reads a subject and what it reads, for writing rules")
     m.add_argument("subject")
-    m.add_argument("--from", dest="sender", default="", metavar="ADDRESS", help="the sender's address")
+    m.add_argument("--from", dest="sender", default="", metavar="SENDER",
+                   help="the sender: an address, or a whole From: value")
 
     pr = sub.add_parser("prune", help="delete what has been quiet for N days from the state db, then shrink it")
     pr.add_argument("--days", type=int, required=True, metavar="N",
@@ -222,7 +223,7 @@ def review(store: Store, cfg: Config, out: Path, since: datetime | None, quiet: 
 
 def match(cfg: Config, subject: str, sender: str) -> int:
     """Print what the rules read from `subject`; EXIT_FAILED when no rule matches it."""
-    m = cfg.rules.match(subject, sender.lower())
+    m = cfg.rules.match(subject, sender)
     if m is None:
         print("no rule matches: in a tickets folder this mail counts as unparsed, in a mail folder it is new mail")
         return EXIT_FAILED

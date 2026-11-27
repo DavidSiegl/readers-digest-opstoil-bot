@@ -18,7 +18,6 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from email.utils import parseaddr
 from enum import StrEnum
 from pathlib import Path
 from typing import NamedTuple, Self
@@ -516,7 +515,7 @@ class Store:
 
 def _matched(rules: Rules, role: str, sender: str, subject: str) -> tuple:
     """The (kind, ticket_id, title, state, category, rule) columns of a message."""
-    m: Match | None = rules.match(subject, _address(sender))
+    m: Match | None = rules.match(subject, sender)
     if m is None:
         kind = Kind.MAIL if role == "mail" else Kind.UNPARSED
         return (kind.value, None, None, None, None, None)
@@ -571,11 +570,6 @@ def _statements(script: str) -> Iterator[str]:
         if sqlite3.complete_statement(statement):
             yield statement
             statement = ""
-
-
-def _address(sender: str) -> str:
-    """The bare address of a From: header, lower-case; the header itself when it holds none."""
-    return parseaddr(sender)[1].lower() or sender.strip().lower()
 
 
 def _utc(at: datetime) -> str:
