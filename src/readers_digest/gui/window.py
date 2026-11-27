@@ -29,7 +29,9 @@ from readers_digest.gui import model  # noqa: E402
 from readers_digest.gui.tray import Tray  # noqa: E402
 from readers_digest.store import Store, default_path  # noqa: E402
 
-# Reverse-DNS id of the application; whoever publishes the tool should put their own namespace here.
+# Reverse-DNS id of the application, after the GitHub account the repository lives under. The .desktop
+# file in contrib/desktop is named after it, and its StartupWMClass and README's `cp` line repeat it:
+# change all four together.
 APP_ID = "io.github.DavidSiegl.ToilDigest"
 ICON_NAME = "readers-digest"
 APP_NAME = "Toil Digest"

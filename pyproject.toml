@@ -18,6 +18,7 @@ classifiers = [
     "Environment :: X11 Applications :: GTK",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Communications :: Email",
 ]
 

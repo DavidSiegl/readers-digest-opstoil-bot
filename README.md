@@ -44,8 +44,9 @@ summary and a reply draft.
 Last successful sync: 2026-11-27 12:01 · Unparsed subjects: 0
 ```
 
-It is a command-line tool with an optional GTK window and tray icon, called Toil Digest. The
-core needs nothing but the standard library of Python 3.12 or later.
+It is a command-line tool with an optional GTK window and tray icon; the
+window is called Toil Digest. The core needs nothing but the standard
+library of Python 3.12 or later.
 
 ## What it never does
 
