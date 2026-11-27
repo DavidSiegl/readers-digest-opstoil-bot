@@ -215,6 +215,10 @@ class Window(Adw.ApplicationWindow):
         self.footer.set_label(v.footer)
         for page in v.pages:
             self._show_page(page)
+        # A page the config no longer asks for, such as Teams turned off.
+        for name in self.pages.keys() - {page.name for page in v.pages}:
+            self.stack.remove(self.pages.pop(name))
+            self.shown.pop(name, None)
         review = self._show_review()
         # A new review is news. hash() differs between runs, but `seen` does
         # not outlive the process either.
