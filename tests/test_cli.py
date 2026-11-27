@@ -102,3 +102,13 @@ def test_a_sync_that_finds_the_lock_busy_touches_nothing(home, capsys, monkeypat
         assert main(home, "sync") == 1
     assert expired == []
     assert "nothing done" in capsys.readouterr().err
+
+
+def test_a_sync_that_gets_the_lock_expires_old_text(home, monkeypatch):
+    from readers_digest.store import Store as RealStore
+
+    expired = []
+    monkeypatch.setattr(RealStore, "expire_text", lambda self, before: expired.append(before) or 0)
+    monkeypatch.setattr(cli, "sync", lambda *a, **k: 0)
+    assert main(home, "sync", "--no-teams") == 0
+    assert len(expired) == 1
