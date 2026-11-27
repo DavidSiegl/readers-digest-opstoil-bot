@@ -9,6 +9,7 @@ from readers_digest.teams.chat import (
     MEETING_DAYS,
     Conversation,
     Message,
+    backward_link,
     conversations,
     display_title,
     link,
@@ -183,3 +184,22 @@ def test_a_reply_that_is_not_a_chat_list_or_a_page_is_refused():
     with pytest.raises(ValueError):
         messages("c1", [], ME)
     assert messages("c1", {"messages": ["junk", raw("1")]}, ME)[0].id == "1"
+
+
+@pytest.mark.parametrize("odd", [{"lastMessage": "x"}, {"consumptionHorizon": 5}, {"title": 3},
+                                 {"lastMessage": {"composeTime": 7}}])
+def test_a_chat_with_a_field_of_an_unexpected_type_is_refused_as_a_value_error(odd):
+    with pytest.raises(ValueError, match="unexpected"):
+        conversations({"chats": [chat(**odd)]}, ME, at(5))
+
+
+@pytest.mark.parametrize("odd", [{"properties": "x"}, {"from": 3}, {"content": ["x"]}, {"imdisplayname": 1}])
+def test_a_message_with_a_field_of_an_unexpected_type_is_refused_as_a_value_error(odd):
+    with pytest.raises(ValueError, match="unexpected"):
+        messages("c1", {"messages": [raw("1", **odd)]}, ME)
+
+
+def test_backward_link_is_the_older_page_or_empty_whatever_the_metadata_holds():
+    assert backward_link({"_metadata": {"backwardLink": "https://x/older"}}) == "https://x/older"
+    for odd in [{}, {"_metadata": "x"}, {"_metadata": {"backwardLink": 3}}, {"_metadata": None}]:
+        assert backward_link(odd) == ""

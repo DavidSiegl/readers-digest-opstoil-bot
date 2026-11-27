@@ -89,52 +89,71 @@ def conversations(me: dict, mri: str, now: datetime) -> list[Conversation]:
     Left out: deleted chats, chats the reader has left (no member entry of
     theirs), muted ones, meeting chats quiet for MEETING_DAYS, and entries
     that are not a chat with an id. Raises ValueError when `me` is not a
-    chat list at all: the client's calls have changed.
+    chat list at all, or a chat in it has a field of an unexpected type:
+    the client's calls have changed.
     """
     if not isinstance(me, dict):
         raise ValueError(f"the chat list is a {type(me).__name__}, not an object")
     out = []
-    for c in me.get("chats") or []:
-        if not isinstance(c, dict) or not c.get("id"):
-            continue
-        if c.get("isConversationDeleted") or c.get("isMuted") is True:
-            continue
-        # A chat the reader left stays listed, with no member entry of theirs.
-        if not any(m.get("mri") == mri for m in c.get("members") or [] if isinstance(m, dict)):
-            continue
-        kind = "1:1" if c.get("isOneOnOne") else "meeting" if c.get("threadType") == "meeting" else "group"
-        last = _time((c.get("lastMessage") or {}).get("composeTime"))
-        if kind == "meeting" and (last is None or last < now - timedelta(days=MEETING_DAYS)):
-            continue
-        out.append(Conversation(str(c["id"]), kind, (c.get("title") or "").strip(), last, c.get("tenantId") or None,
-                                c.get("isRead") is False, _horizon(c)))
+    # A field of an unexpected type fails on use (.get on a string, .strip
+    # on a number): the reply's shape has changed, as for a non-object.
+    try:
+        for c in me.get("chats") or []:
+            if not isinstance(c, dict) or not c.get("id"):
+                continue
+            if c.get("isConversationDeleted") or c.get("isMuted") is True:
+                continue
+            # A chat the reader left stays listed, with no member entry of theirs.
+            if not any(m.get("mri") == mri for m in c.get("members") or [] if isinstance(m, dict)):
+                continue
+            kind = "1:1" if c.get("isOneOnOne") else "meeting" if c.get("threadType") == "meeting" else "group"
+            last = _time((c.get("lastMessage") or {}).get("composeTime"))
+            if kind == "meeting" and (last is None or last < now - timedelta(days=MEETING_DAYS)):
+                continue
+            out.append(Conversation(str(c["id"]), kind, (c.get("title") or "").strip(), last, c.get("tenantId") or None,
+                                    c.get("isRead") is False, _horizon(c)))
+    except (AttributeError, TypeError) as e:
+        raise ValueError(f"the chat list holds a field of an unexpected type: {e}") from None
     return out
 
 
 def messages(conversation_id: str, data: dict, me: str) -> list[Message]:
     """The text messages in one page of a conversation's messages (`data`), oldest first; `me` is the reader's MRI.
 
-    Raises ValueError when `data` is not such a page at all.
+    Raises ValueError when `data` is not such a page at all, or a message in
+    it has a field of an unexpected type.
     """
     if not isinstance(data, dict):
         raise ValueError(f"the page of messages is a {type(data).__name__}, not an object")
     out = []
-    for m in data.get("messages") or []:
-        if not isinstance(m, dict):
-            continue
-        props = m.get("properties") or {}
-        if m.get("messagetype") not in TEXT_TYPES or props.get("deletetime"):
-            continue
-        content = m.get("content") or ""
-        text = (html_to_text(content) if m.get("messagetype") == "RichText/Html" else content).strip()
-        # Arrival, as the read position counts it; composetime can be earlier.
-        sent = _time(m.get("originalarrivaltime") or m.get("composetime"))
-        if not text or sent is None or not m.get("id"):
-            continue
-        sender = (m.get("from") or "").rsplit("/", 1)[-1]
-        out.append(Message(conversation_id, str(m["id"]), sent, sender, (m.get("imdisplayname") or "").strip(),
-                           text, sender == me, me in _mentioned(props.get("mentions"))))
+    # A field of an unexpected type fails on use (.get on a string, .strip
+    # on a number): the reply's shape has changed, as for a non-object.
+    try:
+        for m in data.get("messages") or []:
+            if not isinstance(m, dict):
+                continue
+            props = m.get("properties") or {}
+            if m.get("messagetype") not in TEXT_TYPES or props.get("deletetime"):
+                continue
+            content = m.get("content") or ""
+            text = (html_to_text(content) if m.get("messagetype") == "RichText/Html" else content).strip()
+            # Arrival, as the read position counts it; composetime can be earlier.
+            sent = _time(m.get("originalarrivaltime") or m.get("composetime"))
+            if not text or sent is None or not m.get("id"):
+                continue
+            sender = (m.get("from") or "").rsplit("/", 1)[-1]
+            out.append(Message(conversation_id, str(m["id"]), sent, sender, (m.get("imdisplayname") or "").strip(),
+                               text, sender == me, me in _mentioned(props.get("mentions"))))
+    except (AttributeError, TypeError) as e:
+        raise ValueError(f"the page of messages holds a field of an unexpected type: {e}") from None
     return sorted(out, key=lambda m: (m.sent_at, m.id))
+
+
+def backward_link(data: dict) -> str:
+    """The URL of the page of older messages that one page (`data`) names, or "" when it names none."""
+    meta = data.get("_metadata")
+    url = meta.get("backwardLink") if isinstance(meta, dict) else None
+    return url if isinstance(url, str) else ""
 
 
 def oldest_arrival(data: dict) -> datetime | None:
