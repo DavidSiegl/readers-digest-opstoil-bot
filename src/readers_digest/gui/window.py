@@ -370,7 +370,10 @@ class Window(Adw.ApplicationWindow):
             application_name=APP_NAME,
             application_icon=ICON_NAME,
             version=__version__,
+            developer_name="David Siegl",
+            copyright="© 2026 David Siegl",  # as LICENSE says
             license_type=Gtk.License.MIT_X11,
+            website="https://github.com/DavidSiegl/readers-digest-opstoil-bot",
             comments="Your open tickets, new mail and unread Teams chats, read without changing a thing. "
                      "Review sends new mail and chats to the command the config names.",
         ).present(self)
