@@ -252,9 +252,9 @@ def default_path() -> Path:
 class Store:
     """The state db at `path`, made if missing, its messages matched with `rules`.
 
-    Opening it creates the file owner-only (it holds mail text), upgrades
-    its schema, and re-matches every message if `rules` differ from the
-    rules it was last matched with. Raises OSError or sqlite3.Error,
+    Opening it makes the file owner-only (it holds mail text), and the
+    default state directory too; upgrades its schema; and re-matches every
+    message if `rules` differ from the rules it was last matched with. Raises OSError or sqlite3.Error,
     noting the path, when it cannot be opened, and sqlite3.DatabaseError
     for a db a newer version of this tool wrote.
     """
@@ -264,6 +264,11 @@ class Store:
         self.rules = rules
         try:
             path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            # mkdir's mode does nothing for a directory that exists: teams-login
+            # or the gui may have made it first, with the umask's permissions.
+            # A directory chosen with --db is left as its owner set it.
+            if path.parent == default_path().parent:
+                os.chmod(path.parent, 0o700)
             # isolation_level=None: no implicit BEGIN. Every transaction is
             # opened by _transaction(), so what is atomic is visible here.
             self.con = sqlite3.connect(path, isolation_level=None, timeout=30)

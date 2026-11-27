@@ -144,3 +144,22 @@ def test_record_is_atomic(store):
 def test_age_of_tickets_never_depends_on_now(store):
     store.record([mail("[OPS-1] a", at(1) + timedelta(minutes=30))])
     assert store.tickets()[0].first_seen == at(1) + timedelta(minutes=30)
+
+
+def test_opening_tightens_a_default_state_dir_made_world_readable(cfg, tmp_path, monkeypatch):
+    # teams-login and the gui's path lookup can create it before any Store, with umask permissions.
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
+    from readers_digest.store import default_path
+
+    default_path().parent.mkdir(mode=0o755)
+    with Store(default_path(), cfg.rules):
+        pass
+    assert os.stat(default_path().parent).st_mode & 0o777 == 0o700
+
+
+def test_opening_leaves_a_db_dir_chosen_with_db_alone(cfg, tmp_path):
+    d = tmp_path / "shared"
+    d.mkdir(mode=0o755)
+    with Store(d / "state.db", cfg.rules):
+        pass
+    assert os.stat(d).st_mode & 0o777 == 0o755
