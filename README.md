@@ -127,6 +127,7 @@ readers-digest show      # prints the digest and writes digest.md
 | `prune --days N` | Delete what has been quiet for N days, then shrink the db. `--dry-run` only says what would go. |
 | `gui` | Open the window with a tray icon. |
 | `teams-login` | Log in to Teams once, in the tool's own browser profile. |
+| `teams-probe` | Record the shape of Teams' chat calls, without content, into `teams-probe.json` (see [Teams](#teams)). |
 
 `readers-digest --help` and `readers-digest COMMAND --help` list every option.
 

@@ -22,8 +22,10 @@ complete without it, and a wrong tag never changes a ticket.
 
 **Sources are read-only.** `imap.py` sends EXAMINE and BODY.PEEK and nothing
 that writes; its module docstring lists every command it sends, and the
-tests assert that list. `teams/web.py` blocks every non-GET request the
-Teams web app makes. A rejected IMAP login is never retried, and a Teams
+tests assert that list. `teams/web.py` lets only GET, HEAD and OPTIONS
+through to Teams' chat service, so it sends no message, reaction or read
+mark there; the client's other calls go out as a browser's would (TODO.md, Open
+issues). A rejected IMAP login is never retried, and a Teams
 login that needs a password stops the run instead of typing one.
 
 **All input is untrusted.** Subjects, names, mail bodies and chat messages
@@ -57,6 +59,8 @@ not stored. Changing `[digest]` takes effect on the next `show`.
 | `rules.py` | Matching a subject and sender against the rules, giving a `Match`. |
 | `imap.py` | One read-only IMAP session per account: cursors (UIDVALIDITY + last UID), backfill and overlap, bodies only for `mail` folders. |
 | `store.py` | The SQLite schema, recording mail and chats, folding tickets, cursors, run status per source, tags, announcements, prune. |
+| `text.py` | HTML mail and chat messages as plain text. |
+| `teams/commands.py` | The Teams side of `sync`, and `teams-login` and `teams-probe`; imports `teams/web.py` only when one runs. |
 | `teams/chat.py` | Pure parsing of Teams' chat JSON into conversations and messages; what is unread. |
 | `teams/web.py` | The Playwright side: the tool's own Chromium profile, login, read-only fetching. Imported only when Teams is enabled. |
 | `teams/shape.py` | The content-free shape of Teams' replies, for `teams-probe`. |
