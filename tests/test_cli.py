@@ -155,3 +155,17 @@ def test_sync_stores_the_folders_it_read_and_reports_the_one_it_could_not(store,
     assert store.cursor("work", "INBOX") == Cursor("work", "INBOX", 7, 1)
     assert "work/Tickets: IMAP: EXAMINE Tickets: NO gone" in store.status(Source.MAIL).last_error
     assert "work/Tickets" in capsys.readouterr().err
+
+
+def test_write_private_replaces_the_file_owner_only_even_under_an_open_umask(tmp_path):
+    from readers_digest import write_private
+
+    old = os.umask(0)
+    try:
+        path = tmp_path / "out.json"
+        write_private(path, "one")
+        write_private(path, "two")
+    finally:
+        os.umask(old)
+    assert path.read_text() == "two" and os.stat(path).st_mode & 0o777 == 0o600
+    assert list(tmp_path.iterdir()) == [path]

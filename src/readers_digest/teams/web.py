@@ -30,6 +30,7 @@ from urllib.parse import quote
 from playwright.sync_api import BrowserContext, Page, sync_playwright
 from playwright.sync_api import Error as PlaywrightError
 
+from readers_digest import write_private
 from readers_digest.config import TeamsSettings
 from readers_digest.teams import chat
 from readers_digest.teams.chat import Conversation, Message
@@ -302,6 +303,5 @@ def probe(db: Path, settings: TeamsSettings, out: Path, wait_s: int = PROBE_WAIT
         ctx.on("response", record)
         page = _open(ctx, settings, lambda: bool(calls))
         page.wait_for_timeout(wait_s * 1000)
-    out.write_text(json.dumps(calls, indent=1, ensure_ascii=False), encoding="utf-8")
-    os.chmod(out, 0o600)
+    write_private(out, json.dumps(calls, indent=1, ensure_ascii=False))
     return len(calls)

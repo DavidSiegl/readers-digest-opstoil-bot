@@ -12,7 +12,7 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
-from readers_digest import EXIT_FAILED, EXIT_OK, __version__, failure_line, imap, lock, notify
+from readers_digest import EXIT_FAILED, EXIT_OK, __version__, failure_line, imap, lock, notify, write_private
 from readers_digest import config as config_
 from readers_digest import review as review_
 from readers_digest.config import Config, ConfigError
@@ -179,7 +179,7 @@ def show(store: Store, cfg: Config, out: Path, since: datetime | None, focus_onl
     since = since or previous_working_day(now)
     text = format_digest(collect(store, cfg, since, now, focus_only))
     try:
-        _write_atomic(out, text)
+        write_private(out, text)
     except OSError as e:
         print(f"readers-digest: cannot write {out}: {e}", file=sys.stderr)
         return EXIT_FAILED
@@ -216,7 +216,7 @@ def review(store: Store, cfg: Config, out: Path, since: datetime | None, quiet: 
             print(f"review: nothing new since {since.isoformat(timespec='minutes')}")
         return EXIT_FAILED if err else EXIT_OK
     try:
-        _write_atomic(out, text)
+        write_private(out, text)
     except OSError as e:
         print(f"readers-digest: cannot write {out}: {e}", file=sys.stderr)
         return EXIT_FAILED
@@ -302,14 +302,3 @@ def _timestamp(s: str) -> datetime:
     except ValueError:
         raise argparse.ArgumentTypeError(f"not an ISO 8601 timestamp: {s!r}") from None
     return dt if dt.tzinfo else dt.astimezone()
-
-
-def _write_atomic(path: Path, text: str) -> None:
-    # Whoever has the file open never sees half of it. It lists mail
-    # subjects, so it is created owner-only rather than chmod-ed afterwards.
-    tmp = path.with_name(path.name + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        os.fchmod(f.fileno(), 0o600)  # in case an older .tmp was left behind
-        f.write(text)
-    os.replace(tmp, path)
