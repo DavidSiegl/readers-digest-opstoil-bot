@@ -68,7 +68,7 @@ mail and of chat messages for `retention_days` (default 7).
 ## Install
 
 ```sh
-git clone <this repository> && cd readers-digest-opstoil-bot
+git clone https://github.com/DavidSiegl/readers-digest-opstoil-bot.git && cd readers-digest-opstoil-bot
 uv tool install .            # or: pipx install .
 ```
 
