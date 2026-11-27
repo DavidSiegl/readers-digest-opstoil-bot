@@ -5,17 +5,25 @@
 
 # readers-digest-opstoil-bot
 
-A daily digest of your open tickets, new mail and unread Teams chats, read
-without changing a thing in your mailbox.
+A daily digest of your open tickets, new mail and unread Teams chats,
+triaged by a language model of your choice, and read without changing a
+thing in your mailbox.
 
 Ticket systems send a mail for every change: created, assigned, commented,
 state changed, reminder. `readers-digest` reads those notifications over
 IMAP, works out from their subjects which tickets are open and what state
 each is in, and writes one short digest: what is open by state, what is new
-since the previous working day, what has gone quiet, and what closed. Mail
-no rule matches is listed as new mail. Optionally, a language model of your
-choice tags that mail and your unread Teams chats with who has to act, a
-summary and a reply draft.
+since the previous working day, what has gone quiet, and what closed.
+
+The rest of your mail and your unread Teams chats go to a model review.
+Connect any language model you can run as a command, local or hosted, and
+it reads each new mail and chat and tags it with who has to act (you, your
+team or nobody), what it is (request, question, alert, FYI or noise), a
+one-line summary, and for mail to you a reply draft. The digest then puts
+what needs you first and FYI and noise last, and `review.md` lists every
+entry with its summary and draft. The review is off until you name the
+command, so nothing leaves your machine before you choose where it goes
+(see [Review](#review)).
 
 ```markdown
 # Tickets in focus, 2026-11-27 12:01
@@ -40,13 +48,44 @@ summary and a reply draft.
 
 - [48190](<https://helpdesk.example.com/requests/48190>) · VPN token expired · Helpdesk · Resolved
 
-## New mail in work/INBOX since 2026-11-26 00:00 (1)
+## New mail in work/INBOX since 2026-11-26 00:00 (2)
 
-- 2026-11-27 08:01 · Sam Example · Can you look at the restore test?
+- 2026-11-27 08:01 · [me · request] · Sam Example · Can you look at the restore test?
+  - Sam asks you to check last night's restore test before the 15:00 change.
+
+FYI / noise (1):
+
+- 2026-11-27 06:30 · [nobody · fyi] · Facilities · Lift maintenance on Friday
 
 ---
 
 Last successful sync: 2026-11-27 12:01 · Unparsed subjects: 0
+```
+
+And the model review's own page, `review.md`:
+
+```markdown
+# Review, 2026-11-27 12:01
+
+3 new entries since 2026-11-26 00:00.
+
+> Written by a language model from text other people wrote. Check it against the source before acting.
+
+## For you (1)
+
+- **mail from Sam Example: Can you look at the restore test?** · request — Sam asks you to check last night's restore test before the 15:00 change.
+
+  Draft:
+
+  > Hi Sam, I'll go through the restore test log this morning and get back to you before 15:00.
+
+## For the team (1)
+
+- **Teams, On-call: Robin Example** · alert — Replication lag on db03 has been above five minutes since 07:40.
+
+## Nothing to do (1)
+
+- **mail from Facilities: Lift maintenance on Friday** · fyi — The lifts are out of service on Friday morning.
 ```
 
 It is a command-line tool with an optional GTK window and tray icon; the
