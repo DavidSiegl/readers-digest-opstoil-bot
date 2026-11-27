@@ -7,7 +7,9 @@ headed, with whatever Microsoft asks for (`readers-digest teams-login`);
 later runs reuse the profile's session headless.
 
 Reading only: every write to the chat service is blocked (_read_only), so
-nothing here posts, reacts or marks a message read.
+nothing here posts, reacts or marks a message read. Only that service: the
+client's other calls (presence, sign-in, telemetry) go through, since the
+client cannot load without some of them.
 
 A headless start may land on Microsoft's account picker, or on "Stay signed
 in?". The picker is answered by clicking TeamsSettings.account, and the

@@ -18,3 +18,11 @@ Features a fuller version could have; none is started.
   chats.
 
 ## Open issues
+
+- **Teams writes outside the chat service go through.** Review 01 F3:
+  "the route matches only `/api/chatsvc/`. Every other write the full
+  Teams client makes goes out unblocked during a headless run:
+  presence/endpoint registration, csa, activity-feed and read-state calls
+  on other hosts or paths." The README now says only what is enforced.
+  Closed by blocking every non-GET to Teams hosts except what sign-in and
+  token refresh need, found with `teams-probe` against a real tenant.

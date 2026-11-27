@@ -52,9 +52,10 @@ core needs nothing but the standard library of Python 3.12 or later.
 - It never changes your mailbox. It opens folders with IMAP `EXAMINE` (not
   `SELECT`) and fetches with `BODY.PEEK`, so no mail is marked read,
   flagged, moved or deleted, and nothing it does shows in another client.
-- It never posts to Teams. Every write the Teams web app would make is
-  blocked in the tool's browser profile, so it does not even mark a chat
-  read.
+- It never posts to Teams. Every write to Teams' chat service is blocked
+  in the tool's browser profile, so it never sends a message, reacts, or
+  marks a chat read. The rest of the Teams web app runs as in a browser
+  while a sync reads, so colleagues may see you as online meanwhile.
 - It never types a password into a web page, and never retries a password
   the IMAP server rejected: a retry only counts towards a lockout.
 - It never runs or sends what a model wrote. A reply draft goes to the
