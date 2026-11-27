@@ -1,6 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from conftest import at
 
 from readers_digest.store import Tag
@@ -13,6 +14,7 @@ from readers_digest.teams.chat import (
     link,
     messages,
     my_mri,
+    oldest_arrival,
     review_key,
     to_me,
     unread,
@@ -159,3 +161,25 @@ def test_url_pattern_hides_ids_and_query_values():
                                 "?view=…&pageSize=…")
     assert url_pattern("https://example.com/api/users/12345678-aaaa-bbbb") == "https://example.com/api/users/{id}"
     assert url_pattern("https://example.com/api/v3/teams/users/me") == "https://example.com/api/v3/teams/users/me"
+
+
+def test_oldest_arrival_counts_every_event_not_only_text():
+    page = {"messages": [raw("3", "2026-11-05T12:00:00Z"), raw("2", "2026-11-05T11:00:00Z", kind="Event/Call"),
+                         raw("1", "2026-11-05T09:00:00Z", kind="ThreadActivity/AddMember")]}
+    assert messages("c1", page, ME)[0].sent_at == datetime(2026, 11, 5, 12, tzinfo=UTC)
+    assert oldest_arrival(page) == datetime(2026, 11, 5, 9, tzinfo=UTC)
+    assert oldest_arrival({"messages": []}) is None
+    assert oldest_arrival({}) is None
+
+
+def test_conversations_skip_a_chat_entry_without_an_id():
+    me = {"chats": [chat(), {k: v for k, v in chat(cid="x").items() if k != "id"}, "not a chat"]}
+    assert [c.id for c in conversations(me, ME, at(5))] == ["19:c1@thread.v2"]
+
+
+def test_a_reply_that_is_not_a_chat_list_or_a_page_is_refused():
+    with pytest.raises(ValueError):
+        conversations([], ME, at(5))
+    with pytest.raises(ValueError):
+        messages("c1", [], ME)
+    assert messages("c1", {"messages": ["junk", raw("1")]}, ME)[0].id == "1"

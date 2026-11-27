@@ -178,7 +178,8 @@ def read(db: Path, settings: TeamsSettings, known: dict[str, datetime] | None = 
     fetched again, so a message edited after it was stored keeps its old
     text. The requests go out with the headers the client itself sent to the
     chat service (its access token among them), in the profile's own
-    session. Raises TeamsError (NotLoggedIn among them) or PlaywrightError.
+    session. Raises TeamsError (NotLoggedIn among them), PlaywrightError, or
+    OSError when the profile directory cannot be made.
     """
     cap: dict = {}
 
@@ -200,7 +201,10 @@ def read(db: Path, settings: TeamsSettings, known: dict[str, datetime] | None = 
         ctx.on("response", on_response)
         _open(ctx, settings, lambda: "headers" in cap and "me" in cap)
         me = chat.my_mri(_object_id(cap["headers"]["authorization"]))
-        convs = chat.conversations(cap["me"], me, datetime.now(UTC))
+        try:
+            convs = chat.conversations(cap["me"], me, datetime.now(UTC))
+        except ValueError as e:
+            raise TeamsError(str(e)) from e
         msgs: list[Message] = []
         skipped: list[str] = []
         for c, since in _plan(convs, known or {}):
@@ -224,12 +228,15 @@ def _messages(ctx: BrowserContext, base: str, headers: dict, c: Conversation, si
             data = r.json()
         except (PlaywrightError, ValueError) as e:
             raise TeamsError(f"the chat service sent no JSON: {e}") from e
-        page = chat.messages(c.id, data, me)
-        out += page
+        try:
+            out += chat.messages(c.id, data, me)
+        except ValueError as e:
+            raise TeamsError(str(e)) from e
         older = (data.get("_metadata") or {}).get("backwardLink") or ""
+        oldest = chat.oldest_arrival(data)
         # A full page whose oldest message is still new enough has more
         # behind it. Only links back to the same service are followed.
-        if len(data.get("messages") or []) < PAGE_SIZE or not page or page[0].sent_at < since \
+        if len(data.get("messages") or []) < PAGE_SIZE or oldest is None or oldest < since \
                 or not older.startswith(base + "/"):
             break
         url = older

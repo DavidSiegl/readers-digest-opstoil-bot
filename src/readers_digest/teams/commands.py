@@ -37,7 +37,7 @@ def sync(store: Store, db: Path, settings: TeamsSettings) -> int:
         return failed("no Teams login yet: run readers-digest teams-login")
     try:
         convs, msgs, skipped = web.read(db, settings, store.teams_latest())
-    except (web.TeamsError, web.PlaywrightError) as e:
+    except (web.TeamsError, web.PlaywrightError, OSError) as e:  # OSError: the profile directory
         return failed(failure_line(e))
     new = store.record_teams(convs, msgs)
     store.mark_ok(Source.TEAMS, now)
@@ -66,7 +66,7 @@ def profile_command(command: str, db: Path, settings: TeamsSettings) -> int:
             out = db.parent / "teams-probe.json"
             n = web.probe(db, settings, out)
             print(f"teams-probe: {n} chat and channel calls recorded in {out} (shapes only, no content)")
-    except (web.TeamsError, web.PlaywrightError) as e:
+    except (web.TeamsError, web.PlaywrightError, OSError) as e:  # OSError: the profile, teams-probe.json
         print(f"readers-digest: {command}: {failure_line(e)}", file=sys.stderr)
         return EXIT_FAILED
     return EXIT_OK

@@ -83,10 +83,16 @@ def conversations(me: dict, mri: str, now: datetime) -> list[Conversation]:
     """The chats in the client's chat list (`me`) that the reader, whose id is `mri`, is in and wants, as of `now`.
 
     Left out: deleted chats, chats the reader has left (no member entry of
-    theirs), muted ones, and meeting chats quiet for MEETING_DAYS.
+    theirs), muted ones, meeting chats quiet for MEETING_DAYS, and entries
+    that are not a chat with an id. Raises ValueError when `me` is not a
+    chat list at all: the client's calls have changed.
     """
+    if not isinstance(me, dict):
+        raise ValueError(f"the chat list is a {type(me).__name__}, not an object")
     out = []
     for c in me.get("chats") or []:
+        if not isinstance(c, dict) or not c.get("id"):
+            continue
         if c.get("isConversationDeleted") or c.get("isMuted") is True:
             continue
         # A chat the reader left stays listed, with no member entry of theirs.
@@ -96,15 +102,22 @@ def conversations(me: dict, mri: str, now: datetime) -> list[Conversation]:
         last = _time((c.get("lastMessage") or {}).get("composeTime"))
         if kind == "meeting" and (last is None or last < now - timedelta(days=MEETING_DAYS)):
             continue
-        out.append(Conversation(c["id"], kind, (c.get("title") or "").strip(), last, c.get("tenantId") or None,
+        out.append(Conversation(str(c["id"]), kind, (c.get("title") or "").strip(), last, c.get("tenantId") or None,
                                 c.get("isRead") is False, _horizon(c)))
     return out
 
 
 def messages(conversation_id: str, data: dict, me: str) -> list[Message]:
-    """The text messages in one page of a conversation's messages (`data`), oldest first; `me` is the reader's MRI."""
+    """The text messages in one page of a conversation's messages (`data`), oldest first; `me` is the reader's MRI.
+
+    Raises ValueError when `data` is not such a page at all.
+    """
+    if not isinstance(data, dict):
+        raise ValueError(f"the page of messages is a {type(data).__name__}, not an object")
     out = []
     for m in data.get("messages") or []:
+        if not isinstance(m, dict):
+            continue
         props = m.get("properties") or {}
         if m.get("messagetype") not in TEXT_TYPES or props.get("deletetime"):
             continue
@@ -118,6 +131,18 @@ def messages(conversation_id: str, data: dict, me: str) -> list[Message]:
         out.append(Message(conversation_id, str(m["id"]), sent, sender, (m.get("imdisplayname") or "").strip(),
                            text, sender == me, me in _mentioned(props.get("mentions"))))
     return sorted(out, key=lambda m: (m.sent_at, m.id))
+
+
+def oldest_arrival(data: dict) -> datetime | None:
+    """When the oldest message of one page of a conversation's messages (`data`) arrived, of any type.
+
+    Calls, joins and renames count, unlike in messages(): a page of them
+    still says how far back the page reaches. None when no message in it
+    has a readable time. `data` is a page messages() accepted.
+    """
+    times = [t for m in data.get("messages") or [] if isinstance(m, dict)
+             if (t := _time(m.get("originalarrivaltime") or m.get("composetime"))) is not None]
+    return min(times, default=None)
 
 
 def unread(convs: list[Conversation], msgs: list[Message]) -> list[Unread]:
