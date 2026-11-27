@@ -14,6 +14,12 @@ Features a fuller version could have; none is started.
   it over, close it) from the digest or the window, per ticket system.
 - **Teams notification mail.** Parse Teams' "you have unread messages" mail
   as a fallback when the web session is logged out.
+- **A `mail` command.** Review 01 F8: "the reference's `mail` command (inbox
+  mail since the previous working day) [has a counterpart] in neither
+  `cli.py` nor `TODO.md`." `show` lists that mail already; what is missing
+  is printing one mail whole with its review tag and draft, by Message-ID,
+  optionally as JSON for scripts. Closed by such a command reading only the
+  state db.
 - **Teams channels.** Read channel posts that mention the reader, not only
   chats.
 
