@@ -10,6 +10,10 @@ def test_example_config_parses():
     assert [a.name for a in cfg.accounts] == ["work"]
     assert cfg.teams.enabled is False
     assert cfg.rules.match("[JIRA] (OPS-7) Disk full on db01").ticket == "OPS-7"
+    assert cfg.rules.match("[Jira] Updates for OPS-7: Disk full on db01").title == "Disk full on db01"
+    # README's `match` example.
+    m = cfg.rules.match("Request #48213 (Printer jammed): In progress", "help@helpdesk.example.com")
+    assert (m.ticket, m.state, m.category) == ("48213", "In progress", "Helpdesk")
 
 
 def test_defaults_and_derived_values(cfg):

@@ -17,14 +17,14 @@ summary and a reply draft.
 
 ## Open (4)
 
-### Open (2)
+### Open (3)
 
 - [OPS-1301](<https://jira.example.com/browse/OPS-1301>) · Backup job slow on db02 · OPS · open 9d
+- [OPS-1290](<https://jira.example.com/browse/OPS-1290>) · Rotate TLS certificates · OPS · open 6d
 - [OPS-1312](<https://jira.example.com/browse/OPS-1312>) · Disk full on db01 · OPS · open 3h
 
-### In Progress (2)
+### In Progress (1)
 
-- [OPS-1290](<https://jira.example.com/browse/OPS-1290>) · Rotate TLS certificates · OPS · open 6d
 - [48213](<https://helpdesk.example.com/requests/48213>) · Printer jammed · Helpdesk · open 20h · 1 reminder
 
 ## New since 2026-11-26 00:00 (2)
@@ -33,7 +33,7 @@ summary and a reply draft.
 ...
 ## Closed since 2026-11-26 00:00 (1)
 
-- [OPS-1280](<https://jira.example.com/browse/OPS-1280>) · Upgrade monitoring agent · OPS · Done
+- [48190](<https://helpdesk.example.com/requests/48190>) · VPN token expired · Helpdesk · Resolved
 
 ## New mail in work/INBOX since 2026-11-26 00:00 (1)
 
@@ -102,7 +102,7 @@ have to write yourself:
   subject before you sync:
 
   ```sh
-  readers-digest match '[JIRA] Updates for OPS-1234: Disk full - status changed to Done'
+  readers-digest match 'Request #48213 (Printer jammed): In progress' --from help@helpdesk.example.com
   ```
 
   Changing the rules needs no rebuild: the next run reads every stored

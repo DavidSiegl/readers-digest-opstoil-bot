@@ -39,8 +39,7 @@ Features a fuller version could have; none is started.
   Cloud put a state change in the body ("Closed #12 as completed"), and
   Bugzilla and Redmine in headers (`X-Bugzilla-Status`,
   `X-Redmine-Issue-Status`). With those, every ticket stays open until
-  `window_days` hides it. The example config's Jira rule reads a
-  " - status changed to Done" suffix Jira does not send. Closed by rules
+  `window_days` hides it. Closed by rules
   that can also match named headers and the head of the body, with that
   text kept for re-matching (`retention_days` would otherwise stop a rule
   change from re-reading the past).

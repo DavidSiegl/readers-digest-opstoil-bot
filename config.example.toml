@@ -39,17 +39,20 @@ role = "mail"
 # In TOML, write them in '…' (literal strings) so backslashes stay as they are.
 # Try a rule with: readers-digest match "the subject" --from sender@example.com
 
-# A Jira-like tracker: "[JIRA] (OPS-1234) Disk full on db01" and
-# "[JIRA] Updates for OPS-1234: Disk full on db01 - status changed to Done".
+# Jira: "[JIRA] (OPS-1234) Disk full on db01", and when it batches a ticket's
+# updates, "[JIRA] Updates for OPS-1234: Disk full on db01". Jira's subjects
+# carry no status, so its tickets stay open until window_days hides them
+# (TODO.md, "A ticket's state must be in its subject").
 [[rule]]
-name = "jira-created"
+name = "jira"
 subject = '^\[JIRA\] \((?P<ticket>(?P<category>[A-Z][A-Z0-9]+)-\d+)\) (?P<title>.+)$'
 state = "Open"
 url = "https://jira.example.com/browse/{ticket}"
 
 [[rule]]
-name = "jira-update"
-subject = '^\[JIRA\] Updates for (?P<ticket>(?P<category>[A-Z][A-Z0-9]+)-\d+): (?P<title>.+?)(?: - status changed to (?P<state>.+))?$'
+name = "jira-batched"
+subject = '^\[JIRA\] Updates for (?P<ticket>(?P<category>[A-Z][A-Z0-9]+)-\d+): (?P<title>.+)$'
+state = "Open"
 url = "https://jira.example.com/browse/{ticket}"
 
 # A helpdesk that nags: "Reminder: request #48213 is still open".
