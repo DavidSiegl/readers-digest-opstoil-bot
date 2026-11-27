@@ -3,6 +3,19 @@
        alt="A little bot in reading glasses, reading its digest">
 </p>
 
+<!-- The Python badge repeats pyproject.toml's requires-python, and the review badge what
+     "Review" says a review command may be: a change to one changes the other. -->
+<p align="center">
+  <a href="https://github.com/DavidSiegl/readers-digest-opstoil-bot/releases/latest"><img src="https://img.shields.io/github/v/release/DavidSiegl/readers-digest-opstoil-bot" alt="Latest release"></a>
+  <a href="https://github.com/DavidSiegl/readers-digest-opstoil-bot/releases"><img src="https://img.shields.io/github/downloads/DavidSiegl/readers-digest-opstoil-bot/total?label=asset%20downloads" alt="Downloads of all release assets"></a>
+  <a href="https://github.com/DavidSiegl/readers-digest-opstoil-bot/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/DavidSiegl/readers-digest-opstoil-bot/ci.yml?branch=main&label=CI" alt="CI"></a>
+  <a href="#review"><img src="https://img.shields.io/badge/LLM%20review-any%20model%2C%20local%20or%20hosted-informational" alt="LLM review: any model, local or hosted"></a>
+  <a href="https://www.python.org"><img src="https://img.shields.io/badge/built%20with-Python%203.12%2B-3776AB?logo=python&logoColor=white" alt="Built with Python 3.12 or later"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/DavidSiegl/readers-digest-opstoil-bot" alt="License"></a>
+  <a href="https://github.com/DavidSiegl/readers-digest-opstoil-bot/commits/main"><img src="https://img.shields.io/github/last-commit/DavidSiegl/readers-digest-opstoil-bot" alt="Last commit"></a>
+  <a href="https://ko-fi.com/davidsiegl"><img src="https://img.shields.io/badge/Ko--fi-support%20me-FF5E5B?logo=kofi&logoColor=white" alt="Support me on Ko-fi"></a>
+</p>
+
 # A Reader's Digest Opstoil Bot
 
 A daily digest of your open tickets, new mail and unread Teams chats,
