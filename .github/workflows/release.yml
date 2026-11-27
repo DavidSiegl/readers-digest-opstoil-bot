@@ -1,7 +1,8 @@
 name: Release
 
 # Pushing a tag vX.Y.Z publishes a GitHub release of that commit, with the
-# sdist and wheel attached and notes made from the commits since the last tag.
+# sdist and wheel attached and notes listing the commits since the previous
+# tag.
 
 on:
   push:
@@ -14,8 +15,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      # Pinned by commit, as in ci.yml.
+      # Pinned by commit, as in ci.yml. Full history, for the previous tag.
+      # The job's write token stays out of .git/config, where the tests and
+      # the build backend (third-party code) could read it; only the publish
+      # step gets it.
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           python-version: "3.12"
@@ -32,7 +39,16 @@ jobs:
             exit 1
           fi
       - run: uv build
+      # GitHub's generated notes list merged pull requests, and this repo has
+      # none, so the notes are the commit subjects.
+      - name: Write the release notes
+        run: |
+          if prev=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null); then
+            git log --no-merges --format='- %s' "$prev..$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+          else
+            echo "First release." > "$RUNNER_TEMP/notes.md"
+          fi
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"

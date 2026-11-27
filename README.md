@@ -119,8 +119,13 @@ git clone https://github.com/DavidSiegl/readers-digest-opstoil-bot.git && cd rea
 uv tool install .            # or: pipx install .
 ```
 
-Or install the wheel attached to a [release](https://github.com/DavidSiegl/readers-digest-opstoil-bot/releases):
-`uv tool install ./readers_digest_opstoil_bot-<version>-py3-none-any.whl`.
+Or install the wheel attached to a
+[release](https://github.com/DavidSiegl/readers-digest-opstoil-bot/releases),
+`uv tool install ./readers_digest_opstoil_bot-0.1.0-py3-none-any.whl`, or
+with Teams `uv tool install './readers_digest_opstoil_bot-0.1.0-py3-none-any.whl[teams]'`.
+The wheel holds no example config: take
+[config.example.toml](config.example.toml) from the repository for the next
+step.
 
 With Teams:
 
@@ -269,16 +274,20 @@ uv run ruff check src tests
 [ARCHITECTURE.md](ARCHITECTURE.md) explains how it is put together, and
 [TODO.md](TODO.md) what it does not do yet.
 
-To release, raise `version` in `pyproject.toml`, commit, then tag that
-commit `v` plus the version and push the tag:
+To release, set the new version with `uv version`, which writes it to
+both `pyproject.toml` and `uv.lock` (an edit of `pyproject.toml` alone
+leaves the lock stale, and CI's `uv sync --locked` refuses it), commit
+both, then tag that commit `v` plus the version and push the tag:
 
 ```sh
-git tag -a v0.2.0 -m "readers-digest 0.2.0" && git push origin v0.2.0
+uv version 0.2.0
+git commit -m "Release 0.2.0" pyproject.toml uv.lock
+git tag -a v0.2.0 -m "readers-digest 0.2.0" && git push origin main v0.2.0
 ```
 
 The release workflow tests the tagged commit, checks the tag matches
 `pyproject.toml`, and publishes a GitHub release with the sdist, the wheel
-and notes made from the commits since the previous tag.
+and the subjects of the commits since the previous tag as its notes.
 
 ## License
 
