@@ -1,6 +1,7 @@
 import importlib.util
 import os
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from conftest import CONFIG, at, mail
@@ -76,6 +77,21 @@ def test_gui_without_gi_execs_the_system_python(home, monkeypatch):
     assert argv[-1] == "--hidden" and str(home / "config.toml") in argv
     gui_path = env["PYTHONPATH"].split(os.pathsep)[0]
     assert gui_path.startswith(str(home)) and os.path.islink(os.path.join(gui_path, "readers_digest"))
+
+
+def test_gui_from_a_zip_archive_puts_the_archive_on_the_path(home, monkeypatch, tmp_path):
+    """From a .pyz, `python -m readers_digest` (the window's sync and review) finds the package only there."""
+    pyz = tmp_path / "readers-digest.pyz"
+    monkeypatch.setattr(cli, "ARCHIVE", pyz)
+    monkeypatch.setenv("PYTHONPATH", "/elsewhere")
+    find_spec = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a: None if name == "gi" else find_spec(name, *a))
+    calls = []
+    monkeypatch.setattr(os, "execve", lambda path, argv, env: calls.append(env))
+    assert main(home, "gui") == 0
+    [env] = calls
+    assert env["PYTHONPATH"] == f"{pyz}{os.pathsep}/elsewhere"
+    assert os.environ["PYTHONPATH"] == env["PYTHONPATH"]
 
 
 def test_gui_check_is_passed_to_the_window(home, monkeypatch):
@@ -169,3 +185,25 @@ def test_write_private_replaces_the_file_owner_only_even_under_an_open_umask(tmp
         os.umask(old)
     assert path.read_text() == "two" and os.stat(path).st_mode & 0o777 == 0o600
     assert list(tmp_path.iterdir()) == [path]
+
+
+def test_a_zip_archive_runs_the_cli_and_knows_it_is_one(home, tmp_path):
+    """The .pyz the release ships: the package in a zip, run by `python readers-digest.pyz`."""
+    import shutil
+    import subprocess
+    import sys
+    import zipapp
+
+    stage = tmp_path / "stage"
+    shutil.copytree(Path(cli.__file__).parent, stage / "readers_digest", ignore=shutil.ignore_patterns("__pycache__"))
+    pyz = tmp_path / "readers-digest.pyz"
+    zipapp.create_archive(stage, pyz, main="readers_digest.cli:main")
+    env = {**os.environ, "PYTHONPATH": ""}
+    argv = [sys.executable, pyz, "--config", home / "config.toml", "match", "[OPS-7] Disk full is now Open"]
+    run = subprocess.run(argv, capture_output=True, text=True, env=env, cwd=tmp_path)
+    assert run.returncode == 0, run.stderr
+    assert "rule:     update" in run.stdout
+    env["PYTHONPATH"] = str(pyz)
+    run = subprocess.run([sys.executable, "-c", "import readers_digest; print(readers_digest.ARCHIVE)"],
+                         capture_output=True, text=True, env=env, cwd=tmp_path)
+    assert run.stdout.strip() == str(pyz), run.stderr

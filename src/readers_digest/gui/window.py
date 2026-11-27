@@ -15,6 +15,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime
+from importlib.resources import as_file, files
 from pathlib import Path
 
 import gi
@@ -37,7 +38,6 @@ from readers_digest.store import Store, default_path  # noqa: E402
 APP_ID = "io.github.DavidSiegl.ToilDigest"
 ICON_NAME = "readers-digest"
 APP_NAME = "Toil Digest"
-ICON_DIR = Path(__file__).parent / "icons"
 # The timer may sync in the background; the db is cheap to read again.
 RELOAD_S = 60
 # Seconds `gui --check` may take before a restart is given up: it imports GTK.
@@ -64,6 +64,8 @@ class Options:
     db: Path
     # The command line that runs readers-digest, with the global options: [python, -m, readers_digest, --config, …].
     cli: list[str]
+    # The directory holding the icons, ICON_NAME.svg and the tray's attention one, as files GTK can read.
+    icons: Path
 
 
 @dataclass(frozen=True)
@@ -481,7 +483,7 @@ class App(Adw.Application):
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
         display = Gdk.Display.get_default()
-        Gtk.IconTheme.get_for_display(display).add_search_path(str(ICON_DIR))
+        Gtk.IconTheme.get_for_display(display).add_search_path(str(self.opts.icons))
         Gtk.Window.set_default_icon_name(ICON_NAME)
         css = Gtk.CssProvider()
         css.load_from_data(CSS, -1)
@@ -493,7 +495,7 @@ class App(Adw.Application):
         self.set_accels_for_action("win.reload", ["<Control>r", "F5"])
         conn = self.get_dbus_connection()
         if conn is not None:
-            self.tray = Tray(conn, APP_ID, APP_NAME, ICON_NAME, ICON_DIR, activate=self.activate, menu=[
+            self.tray = Tray(conn, APP_ID, APP_NAME, ICON_NAME, self.opts.icons, activate=self.activate, menu=[
                 ("Open", self.activate),
                 ("Sync", lambda: self._window().run_cli("sync", ["sync"], say_last=True)),
                 (None, None),
@@ -575,6 +577,8 @@ def main(argv: list[str] | None = None) -> int:
     cli = [args.cli_python, "-m", "readers_digest"]
     cli += ["--config", str(args.config)] if args.config else []
     cli += ["--db", str(args.db)] if args.db else []
-    opts = Options(path, args.db or default_path(), cli)
-    # GApplication must not see our own options.
-    return App(opts, args.hidden).run([sys.argv[0]])
+    # Run from a zip archive, the icons are copied out for the window's lifetime, and left behind by a restart.
+    with as_file(files(__package__) / "icons") as icons:
+        opts = Options(path, args.db or default_path(), cli, icons)
+        # GApplication must not see our own options.
+        return App(opts, args.hidden).run([sys.argv[0]])

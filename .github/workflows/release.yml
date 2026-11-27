@@ -1,7 +1,7 @@
 name: Release
 
 # Pushing a tag vX.Y.Z publishes a GitHub release of that commit, with the
-# sdist and wheel attached and, as notes, the subjects of the commits since
+# sdist, the wheel and readers-digest.pyz attached and, as notes, the subjects of the commits since
 # the previous v* tag (GitHub's generated notes list merged pull requests,
 # and this repo has none).
 #
@@ -48,6 +48,15 @@ jobs:
             exit 1
           fi
       - run: uv build
+      # One file that runs on any Python 3.12 or later: the wheel's contents,
+      # its metadata included so that --version knows the version, zipped
+      # with a __main__.py that runs the CLI.
+      - name: Build readers-digest.pyz
+        run: |
+          stage="$RUNNER_TEMP/pyz"
+          uv run python -m zipfile -e dist/*.whl "$stage"
+          uv run python -m zipapp "$stage" -c -p "/usr/bin/env python3" -m readers_digest.cli:main \
+            -o dist/readers-digest.pyz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: dist

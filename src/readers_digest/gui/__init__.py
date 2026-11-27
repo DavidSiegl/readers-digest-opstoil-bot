@@ -9,19 +9,24 @@ this package, and runs sync and review as readers-digest subprocesses.
 
 from pathlib import Path
 
-# The readers_digest package this was loaded from.
-PACKAGE_ROOT = Path(__file__).parent.parent
+from readers_digest import ARCHIVE
+
+# Where the readers_digest package this was loaded from lies: its directory, or the zip archive holding it.
+PACKAGE_ROOT = ARCHIVE or Path(__file__).parent.parent
 
 
 def code_stamp(root: Path = PACKAGE_ROOT) -> tuple | None:
-    """What the .py files under `root` are now: equal stamps mean no file was replaced, added or removed.
+    """What the code at `root` is now: equal stamps mean no file was replaced, added or removed.
 
-    None when there is none to read, as while an install has the package
-    half removed. A stamp is good only for comparing with another one.
+    `root` is a package directory, whose .py files count, or one file, as a
+    zip archive is. None when there is none to read, as while an install
+    has the package half removed. A stamp is good only for comparing with
+    another one.
     """
     try:
+        files = [root] if root.is_file() else root.rglob("*.py")
         stamp = tuple(sorted((str(p.relative_to(root)), s.st_mtime_ns, s.st_size)
-                             for p in root.rglob("*.py") for s in [p.stat()]))
+                             for p in files for s in [p.stat()]))
     except OSError:
         return None
     return stamp or None

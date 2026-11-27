@@ -141,7 +141,15 @@ uv tool install './readers_digest_opstoil_bot-<version>-py3-none-any.whl'       
 uv tool install './readers_digest_opstoil_bot-<version>-py3-none-any.whl[teams]'   # then playwright, as below
 ```
 
-The wheel holds no example config: download
+Or, with nothing to install, download `readers-digest.pyz` from a release:
+one file that any Python 3.12 or later runs, the window included, but not
+Teams, which needs Playwright and its browser.
+
+```sh
+chmod +x readers-digest.pyz && ./readers-digest.pyz --version   # or: python3 readers-digest.pyz --version
+```
+
+Neither the wheel nor the .pyz holds the example config: download
 [config.example.toml](config.example.toml) from the repository for
 [Configure](#configure).
 

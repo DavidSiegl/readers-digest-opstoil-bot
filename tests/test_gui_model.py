@@ -138,3 +138,16 @@ def test_code_stamp_is_none_for_a_package_mid_install(tmp_path):
     assert code_stamp(tmp_path / "gone") is None
     (tmp_path / "empty").mkdir()
     assert code_stamp(tmp_path / "empty") is None
+
+
+def test_code_stamp_of_a_zip_archive_changes_when_it_is_replaced(tmp_path):
+    from readers_digest.gui import code_stamp
+
+    pyz = tmp_path / "readers-digest.pyz"
+    pyz.write_bytes(b"one")
+    first = code_stamp(pyz)
+    assert first is not None and code_stamp(pyz) == first
+    pyz.write_bytes(b"three")
+    assert code_stamp(pyz) != first
+    pyz.unlink()
+    assert code_stamp(pyz) is None

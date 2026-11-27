@@ -12,7 +12,7 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
-from readers_digest import EXIT_FAILED, EXIT_OK, __version__, failure_line, imap, lock, notify, write_private
+from readers_digest import ARCHIVE, EXIT_FAILED, EXIT_OK, __version__, failure_line, imap, lock, notify, write_private
 from readers_digest import config as config_
 from readers_digest import review as review_
 from readers_digest.config import Config, ConfigError
@@ -252,9 +252,12 @@ def gui(config: Path | None, db: Path | None, hidden: bool = False, check: bool 
         execve: Callable | None = None) -> int:
     """Run the window: in this process if it can load PyGObject, else on the system Python, replacing this one.
 
-    The window runs this CLI, on this Python (`python -m readers_digest`), for sync and review.
+    The window runs this CLI, on this Python (`python -m readers_digest`), for sync and review;
+    run from a zip archive, this puts the archive on PYTHONPATH, in os.environ, for them to find it.
     `check` only loads what the window needs, and the config, and exits.
     """
+    if ARCHIVE is not None:
+        os.environ["PYTHONPATH"] = _with_path(ARCHIVE)
     argv = ["--cli-python", sys.executable]
     argv += ["--config", str(config)] if config else []
     argv += ["--db", str(db)] if db else []
@@ -264,13 +267,18 @@ def gui(config: Path | None, db: Path | None, hidden: bool = False, check: bool 
         from readers_digest.gui.window import main as window
         return window(argv)
     try:
-        path = os.pathsep.join(x for x in (str(_gui_path()), os.environ.get("PYTHONPATH")) if x)
+        path = os.environ["PYTHONPATH"] if ARCHIVE is not None else _with_path(_gui_path())
         (execve or os.execve)(SYSTEM_PYTHON, [SYSTEM_PYTHON, "-m", "readers_digest.gui", *argv],
                               {**os.environ, "PYTHONPATH": path})
     except OSError as e:
         print(f"readers-digest: cannot start the window with {SYSTEM_PYTHON}: {e}", file=sys.stderr)
         return EXIT_FAILED
     return EXIT_OK  # only reached when execve is a test double
+
+
+def _with_path(entry: Path) -> str:
+    """PYTHONPATH with `entry` first."""
+    return os.pathsep.join(x for x in (str(entry), os.environ.get("PYTHONPATH")) if x)
 
 
 def _gui_path() -> Path:

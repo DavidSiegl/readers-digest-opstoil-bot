@@ -6,6 +6,7 @@ only its owner may read.
 """
 
 import os
+import zipimport
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
@@ -14,7 +15,13 @@ try:
 except PackageNotFoundError:  # run from a checkout that was never installed
     __version__ = "0+unknown"
 
-__all__ = ["EXIT_FAILED", "EXIT_OK", "__version__", "failure_line", "write_private"]
+# The zip archive this package was imported from, as the release's
+# readers-digest.pyz is, absolute; None when it was imported from files.
+# Another Python finds the package only with the archive on its path, and
+# GTK reads no file inside it.
+ARCHIVE = Path(__loader__.archive).resolve() if isinstance(__loader__, zipimport.zipimporter) else None
+
+__all__ = ["ARCHIVE", "EXIT_FAILED", "EXIT_OK", "__version__", "failure_line", "write_private"]
 
 # A command's exit status; argparse exits 2 on its own for a usage error.
 EXIT_OK = 0
