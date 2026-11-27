@@ -267,7 +267,7 @@ def gui(config: Path | None, db: Path | None, hidden: bool = False, check: bool 
         from readers_digest.gui.window import main as window
         return window(argv)
     try:
-        path = os.environ["PYTHONPATH"] if ARCHIVE is not None else _with_path(_gui_path())
+        path = _with_path(ARCHIVE or _gui_path())
         (execve or os.execve)(SYSTEM_PYTHON, [SYSTEM_PYTHON, "-m", "readers_digest.gui", *argv],
                               {**os.environ, "PYTHONPATH": path})
     except OSError as e:
@@ -277,8 +277,9 @@ def gui(config: Path | None, db: Path | None, hidden: bool = False, check: bool 
 
 
 def _with_path(entry: Path) -> str:
-    """PYTHONPATH with `entry` first."""
-    return os.pathsep.join(x for x in (str(entry), os.environ.get("PYTHONPATH")) if x)
+    """PYTHONPATH with `entry` first, and only there, so that each restart through gui leaves it as long."""
+    rest = [x for x in os.environ.get("PYTHONPATH", "").split(os.pathsep) if x and x != str(entry)]
+    return os.pathsep.join([str(entry), *rest])
 
 
 def _gui_path() -> Path:

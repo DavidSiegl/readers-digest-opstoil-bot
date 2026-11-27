@@ -13,6 +13,7 @@ import argparse
 import os
 import subprocess
 import sys
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import datetime
 from importlib.resources import as_file, files
@@ -24,7 +25,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from readers_digest import EXIT_FAILED, EXIT_OK, __version__, failure_line  # noqa: E402
+from readers_digest import ARCHIVE, EXIT_FAILED, EXIT_OK, __version__, failure_line  # noqa: E402
 from readers_digest import config as config_  # noqa: E402
 from readers_digest.config import Config, ConfigError  # noqa: E402
 from readers_digest.digest import collect, previous_working_day  # noqa: E402
@@ -189,7 +190,9 @@ class Window(Adw.ApplicationWindow):
             # alone for a tick, so a half-written package is never started.
             # The old code would refuse a db the new one upgraded.
             # A package that stays unreadable (None) has moved, as a
-            # reinstall on another Python does: gui finds it again.
+            # reinstall on another Python does: gui finds it again. A zip
+            # archive is followed only at its path: one moved or deleted
+            # fails the restart's check, and a toast says so.
             code = code_stamp()
             if code != self.code_started and code == self.code_seen:
                 self.code_started = code  # one try per install; a failed one waits for the next
@@ -523,7 +526,7 @@ class App(Adw.Application):
         """Replace this process with the window the code now installed draws, shown or hidden as it is now.
 
         Goes through the CLI's `gui`, which finds the package wherever the
-        install put it. When `gui --check` fails (a config that does not
+        install put it, or a zip archive where the last one was. When `gui --check` fails (a config that does not
         load, an install that does not import), this window stays and a
         toast says why. Blocks for as long as that check runs.
         """
@@ -579,8 +582,14 @@ def main(argv: list[str] | None = None) -> int:
     cli = [args.cli_python, "-m", "readers_digest"]
     cli += ["--config", str(args.config)] if args.config else []
     cli += ["--db", str(args.db)] if args.db else []
-    # Run from a zip archive, the icons are copied out for the window's lifetime, and left behind by a restart.
-    with as_file(files(__package__) / "icons") as icons:
+    # Run from a zip archive, the icons are copied out for the window's
+    # lifetime, and left behind by a restart or a kill.
+    with ExitStack() as stack:
+        try:
+            icons = stack.enter_context(as_file(files(__package__) / "icons"))
+        except OSError as e:
+            print(f"readers-digest: cannot copy the icons out of {ARCHIVE}: {e}", file=sys.stderr)
+            return EXIT_FAILED
         opts = Options(path, args.db or default_path(), cli, icons)
         # GApplication must not see our own options.
         return App(opts, args.hidden).run([sys.argv[0]])

@@ -89,9 +89,9 @@ def test_gui_from_a_zip_archive_puts_the_archive_on_the_path(home, monkeypatch, 
     calls = []
     monkeypatch.setattr(os, "execve", lambda path, argv, env: calls.append(env))
     assert main(home, "gui") == 0
-    [env] = calls
-    assert env["PYTHONPATH"] == f"{pyz}{os.pathsep}/elsewhere"
-    assert os.environ["PYTHONPATH"] == env["PYTHONPATH"]
+    assert main(home, "gui") == 0  # as a restart does, with the PYTHONPATH the first set
+    assert [env["PYTHONPATH"] for env in calls] == [f"{pyz}{os.pathsep}/elsewhere"] * 2
+    assert os.environ["PYTHONPATH"] == calls[0]["PYTHONPATH"]
 
 
 def test_gui_check_is_passed_to_the_window(home, monkeypatch):
@@ -188,22 +188,29 @@ def test_write_private_replaces_the_file_owner_only_even_under_an_open_umask(tmp
 
 
 def test_a_zip_archive_runs_the_cli_and_knows_it_is_one(home, tmp_path):
-    """The .pyz the release ships: the package in a zip, run by `python readers-digest.pyz`."""
+    """The .pyz the release ships, built as release.yml builds it, run by `python readers-digest.pyz`."""
     import shutil
     import subprocess
     import sys
     import zipapp
 
     stage = tmp_path / "stage"
-    shutil.copytree(Path(cli.__file__).parent, stage / "readers_digest", ignore=shutil.ignore_patterns("__pycache__"))
+    package = Path(cli.__file__).parent
+    shutil.copytree(package, stage / "readers_digest", ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copy(package / "__main__.py", stage)
     pyz = tmp_path / "readers-digest.pyz"
-    zipapp.create_archive(stage, pyz, main="readers_digest.cli:main")
+    zipapp.create_archive(stage, pyz)
     env = {**os.environ, "PYTHONPATH": ""}
     argv = [sys.executable, pyz, "--config", home / "config.toml", "match", "[OPS-7] Disk full is now Open"]
     run = subprocess.run(argv, capture_output=True, text=True, env=env, cwd=tmp_path)
     assert run.returncode == 0, run.stderr
     assert "rule:     update" in run.stdout
-    env["PYTHONPATH"] = str(pyz)
+    run = subprocess.run([sys.executable, pyz, "--config", tmp_path / "missing.toml", "show"],
+                         capture_output=True, text=True, env=env, cwd=tmp_path)
+    assert run.returncode == 1 and "missing.toml" in run.stderr
+    # Through a link, as an install may name the current version: the link is what gets replaced.
+    (tmp_path / "current.pyz").symlink_to(pyz)
+    env["PYTHONPATH"] = "current.pyz"
     run = subprocess.run([sys.executable, "-c", "import readers_digest; print(readers_digest.ARCHIVE)"],
                          capture_output=True, text=True, env=env, cwd=tmp_path)
-    assert run.stdout.strip() == str(pyz), run.stderr
+    assert run.stdout.strip() == str(tmp_path / "current.pyz"), run.stderr

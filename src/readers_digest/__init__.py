@@ -16,10 +16,12 @@ except PackageNotFoundError:  # run from a checkout that was never installed
     __version__ = "0+unknown"
 
 # The zip archive this package was imported from, as the release's
-# readers-digest.pyz is, absolute; None when it was imported from files.
+# readers-digest.pyz is, absolute but with symlinks kept, so that a link
+# moved to a newer archive counts as a replacement; None when it was
+# imported from files.
 # Another Python finds the package only with the archive on its path, and
 # GTK reads no file inside it.
-ARCHIVE = Path(__loader__.archive).resolve() if isinstance(__loader__, zipimport.zipimporter) else None
+ARCHIVE = Path(__loader__.archive).absolute() if isinstance(__loader__, zipimport.zipimporter) else None
 
 __all__ = ["ARCHIVE", "EXIT_FAILED", "EXIT_OK", "__version__", "failure_line", "write_private"]
 

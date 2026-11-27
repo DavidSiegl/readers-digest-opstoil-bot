@@ -50,13 +50,14 @@ jobs:
       - run: uv build
       # One file that runs on any Python 3.12 or later: the wheel's contents,
       # its metadata included so that --version knows the version, zipped
-      # with a __main__.py that runs the CLI.
+      # with the package's __main__.py at the root. Not zipapp's -m, whose
+      # __main__.py drops the exit status cli.main returns.
       - name: Build readers-digest.pyz
         run: |
           stage="$RUNNER_TEMP/pyz"
           uv run python -m zipfile -e dist/*.whl "$stage"
-          uv run python -m zipapp "$stage" -c -p "/usr/bin/env python3" -m readers_digest.cli:main \
-            -o dist/readers-digest.pyz
+          cp "$stage/readers_digest/__main__.py" "$stage/"
+          uv run python -m zipapp "$stage" -c -p "/usr/bin/env python3" -o dist/readers-digest.pyz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: dist
