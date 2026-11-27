@@ -138,15 +138,16 @@ class Window(Adw.ApplicationWindow):
         action.connect("activate", lambda *_: self.reload())
         self.add_action(action)
 
-        # The digest's pages are added by the first reload; Review goes last.
+        # The digest's pages, added by the first reload that reads the db;
+        # _show_page keeps the Review page after them.
         self.pages: dict[str, Gtk.ScrolledWindow] = {}
+        self.review_page = Gtk.ScrolledWindow(child=self.review_view, vexpand=True)
+        self.stack.add_titled_with_icon(self.review_page, "review", "Review", "document-edit-symbolic")
         # What each page last showed, and the rows and folded groups the
         # reader has open (_keep_open): a reload must not close them.
         self.shown: dict[str, model.Page] = {}
         self.expanded: set[str] = set()
         self.reload()
-        self.stack.add_titled_with_icon(Gtk.ScrolledWindow(child=self.review_view, vexpand=True),
-                                        "review", "Review", "document-edit-symbolic")
         GLib.timeout_add_seconds(RELOAD_S, self._tick)
 
     def _close(self, _win: Gtk.Window) -> bool:
@@ -225,7 +226,15 @@ class Window(Adw.ApplicationWindow):
         scroll = self.pages.get(page.name)
         if scroll is None:
             scroll = self.pages[page.name] = Gtk.ScrolledWindow(child=clamp, vexpand=True)
+            # A stack lists its pages in the order they were added.
+            visible = self.stack.get_visible_child_name()
+            self.stack.remove(self.review_page)
             self.stack.add_titled_with_icon(scroll, page.name, page.title, page.icon)
+            self.stack.add_titled_with_icon(self.review_page, "review", "Review", "document-edit-symbolic")
+            # Stay where the reader was, unless this is the first digest page:
+            # then the digest is shown rather than the Review page.
+            if visible is not None and len(self.pages) > 1:
+                self.stack.set_visible_child_name(visible)
         else:
             # Keep the reader's place across a reload.
             adj = scroll.get_vadjustment()
