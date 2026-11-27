@@ -231,10 +231,10 @@ def _messages(ctx: BrowserContext, base: str, headers: dict, c: Conversation, si
             raise TeamsError(f"the chat service sent no JSON: {e}") from e
         try:
             out += chat.messages(c.id, data, me)
+            oldest = chat.oldest_arrival(data)
         except ValueError as e:
             raise TeamsError(str(e)) from e
         older = chat.backward_link(data)
-        oldest = chat.oldest_arrival(data)
         # A full page whose oldest message is still new enough has more
         # behind it. Only links back to the same service are followed.
         if len(data.get("messages") or []) < PAGE_SIZE or oldest is None or oldest < since \

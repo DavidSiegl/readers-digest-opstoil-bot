@@ -199,6 +199,14 @@ def test_a_message_with_a_field_of_an_unexpected_type_is_refused_as_a_value_erro
         messages("c1", {"messages": [raw("1", **odd)]}, ME)
 
 
+def test_a_call_with_an_arrival_time_of_an_unexpected_type_is_refused_as_a_value_error():
+    # messages() skips the call before reading its time; oldest_arrival() reads it.
+    page = {"messages": [raw("1"), raw("2", 1730000000000, kind="Event/Call")]}
+    assert [m.id for m in messages("c1", page, ME)] == ["1"]
+    with pytest.raises(ValueError, match="unexpected"):
+        oldest_arrival(page)
+
+
 def test_backward_link_is_the_older_page_or_empty_whatever_the_metadata_holds():
     assert backward_link({"_metadata": {"backwardLink": "https://x/older"}}) == "https://x/older"
     for odd in [{}, {"_metadata": "x"}, {"_metadata": {"backwardLink": 3}}, {"_metadata": None}]:
