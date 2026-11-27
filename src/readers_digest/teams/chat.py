@@ -161,9 +161,10 @@ def oldest_arrival(page: dict) -> datetime | None:
 
     Calls, joins and renames count, unlike in messages(): a page of them
     still says how far back the page reaches. None when no message in it
-    has a time. `page` is a page messages() accepted. Raises ValueError when
-    a message's time is of an unexpected type, which messages() does not
-    see for the types it skips.
+    has a readable time; a time string that does not parse is ignored.
+    `page` is a page messages() accepted. Raises ValueError when a message's
+    time is of an unexpected type, which messages() does not see for the
+    messages it skips (other types, deleted ones).
     """
     try:
         times = [t for m in page.get("messages") or [] if isinstance(m, dict)
