@@ -72,6 +72,11 @@ class _Command:
 
 
 class Window(Adw.ApplicationWindow):
+    """The main window: the digest's pages, the Review page, and the Sync and Review buttons.
+
+    Closing it hides it while a tray shows the icon, and quits otherwise.
+    """
+
     def __init__(self, app: "App", opts: Options):
         super().__init__(application=app, title=APP_NAME, default_width=960, default_height=760)
         self.opts = opts
@@ -332,6 +337,7 @@ class Window(Adw.ApplicationWindow):
         self.toast(f"copied {what}")
 
     def about(self) -> None:
+        """Show the About dialog."""
         Adw.AboutDialog(
             application_name=APP_NAME,
             application_icon=ICON_NAME,
@@ -342,6 +348,7 @@ class Window(Adw.ApplicationWindow):
         ).present(self)
 
     def open_link(self, uri: str) -> None:
+        """Open `uri` in the reader's browser."""
         Gtk.UriLauncher(uri=uri).launch(self, None, None, None)
 
 
@@ -427,6 +434,11 @@ def _row(r: model.Row, win: Window, key: str) -> Gtk.Widget:
 
 
 class App(Adw.Application):
+    """The application: one window, kept while hidden in the tray, and the tray icon.
+
+    A second start raises the running window instead of opening another.
+    """
+
     def __init__(self, opts: Options, hidden: bool = False):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.opts = opts

@@ -117,17 +117,20 @@ class Tray:
                                                        self._appeared, self._vanished)
 
     def close(self) -> None:
+        """Take the icon out of the tray and stop answering for it on the bus."""
         Gio.bus_unwatch_name(self._watch)
         for i in self._ids:
             self.conn.unregister_object(i)
         self.registered = False
 
     def set_tooltip(self, text: str) -> None:
+        """Show `text`, plain text, as the icon's tooltip."""
         if text != self.tooltip:
             self.tooltip = text
             self._emit("NewToolTip")
 
     def set_attention(self, on: bool) -> None:
+        """Show the icon with its dot (`on`) or without it."""
         if on != self.attention:
             self.attention = on
             self._emit("NewIcon")

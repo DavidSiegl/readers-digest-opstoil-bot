@@ -32,6 +32,8 @@ class Role(StrEnum):
 
 
 class Security(StrEnum):
+    """How an account's IMAP connection is protected."""
+
     SSL = "ssl"  # TLS from the start (IMAPS, port 993)
     STARTTLS = "starttls"  # plain connect, then STARTTLS before LOGIN (port 143)
     # No TLS at all: only to a gateway on this machine, e.g. one that speaks
@@ -41,12 +43,16 @@ class Security(StrEnum):
 
 @dataclass(frozen=True)
 class Folder:
+    """One IMAP folder an account reads, and what kind of mail it holds."""
+
     name: str  # the IMAP mailbox name, as the server lists it
     role: Role
 
 
 @dataclass(frozen=True)
 class Account:
+    """One IMAP login and the folders sync reads with it."""
+
     # Shown in the digest, and the key of the account's cursors in the state db:
     # renaming it makes the next sync read its backfill again.
     name: str
@@ -61,6 +67,8 @@ class Account:
 
 @dataclass(frozen=True)
 class SyncSettings:
+    """[sync]: how far back sync reads, and what mail text it keeps."""
+
     # Days of mail a folder's first sync reads, and every sync after its UIDVALIDITY changed.
     backfill_days: int = 30
     # Days re-read on every sync, whatever the cursor says, in case the server
@@ -75,6 +83,8 @@ class SyncSettings:
 
 @dataclass(frozen=True)
 class DigestSettings:
+    """[digest]: which tickets the digest lists, and how it groups them."""
+
     # An open ticket with no mail for this many days is listed as stale.
     stale_days: int = 5
     # An open ticket with no mail for this many days is no longer listed at all,
@@ -89,11 +99,14 @@ class DigestSettings:
     state_order: tuple[str, ...] = ()
 
     def is_closed(self, state: str | None) -> bool:
+        """`state` is one of closed_states, ignoring case; None (no state yet) is open."""
         return state is not None and state.casefold() in self.closed_states
 
 
 @dataclass(frozen=True)
 class ReviewSettings:
+    """[review]: the command review sends mail and chats to, and who they are read for."""
+
     # Gets the prompt on stdin and must print the model's answer on stdout. None: review is off.
     command: tuple[str, ...] | None = None
     # Who the mail is read for, as mail names them: "Alex Example".
@@ -107,6 +120,8 @@ class ReviewSettings:
 
 @dataclass(frozen=True)
 class TeamsSettings:
+    """[teams]: whether sync reads Teams chats, and how its browser reaches Teams."""
+
     # Read Teams chats on every sync (needs the `teams` extra and a teams-login first).
     enabled: bool = False
     # The address Microsoft's account picker lists the reader under, clicked
@@ -122,6 +137,8 @@ class TeamsSettings:
 
 @dataclass(frozen=True)
 class Config:
+    """The whole config file, validated; config.load and config.parse make one."""
+
     accounts: tuple[Account, ...]
     rules: Rules
     sync: SyncSettings = field(default_factory=SyncSettings)
@@ -135,6 +152,11 @@ class Config:
 
 
 def default_path() -> Path:
+    """Where the config is read from without --config.
+
+    That is readers-digest/config.toml in $XDG_CONFIG_HOME,
+    or in ~/.config when that is unset or relative.
+    """
     base = os.environ.get("XDG_CONFIG_HOME", "")
     # The XDG base directory spec says a relative value is to be ignored.
     root = Path(base) if os.path.isabs(base) else Path.home() / ".config"

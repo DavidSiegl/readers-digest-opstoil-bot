@@ -19,6 +19,8 @@ UNREAD_SHOWN = 20
 
 
 class Badge(NamedTuple):
+    """A short label at the end of a row."""
+
     text: str
     # Drawn in the warning colour: something the reader has to act on.
     warn: bool = False
@@ -26,6 +28,8 @@ class Badge(NamedTuple):
 
 @dataclass(frozen=True)
 class Row:
+    """One ticket, mail or Teams conversation in a group. Every string is plain text, never markup."""
+
     title: str
     subtitle: str = ""
     badges: tuple[Badge, ...] = ()
@@ -42,6 +46,8 @@ class Row:
 
 @dataclass(frozen=True)
 class Group:
+    """A heading and its rows; a group with no rows is shown as "None"."""
+
     title: str
     rows: tuple[Row, ...]
     # Shown collapsed until opened, but still listed in full: closed tickets, FYI and noise mail.
@@ -50,6 +56,8 @@ class Group:
 
 @dataclass(frozen=True)
 class Page:
+    """One page of the window's switcher: Tickets, Mail or Teams."""
+
     # The page's id in the window's stack, stable across reloads.
     name: str
     title: str

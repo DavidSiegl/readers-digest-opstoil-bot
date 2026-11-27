@@ -160,6 +160,8 @@ class Mail:
 
 @dataclass(frozen=True)
 class Cursor:
+    """Where a folder's last sync stopped: the folder's UIDVALIDITY then, and the highest UID it read."""
+
     account: str
     folder: str
     uidvalidity: int
@@ -168,6 +170,8 @@ class Cursor:
 
 @dataclass(frozen=True)
 class Ticket:
+    """One ticket as folded from all its mail (the module docstring says how)."""
+
     id: str
     # The rule that read its newest mail (Rules.url).
     rule: str
@@ -206,6 +210,8 @@ class Source(StrEnum):
 
 @dataclass(frozen=True)
 class RunStatus:
+    """When a Source was last read successfully and when it last failed, with that failure's one-line error."""
+
     last_ok_at: datetime | None
     last_error_at: datetime | None
     last_error: str | None
@@ -217,6 +223,8 @@ class RunStatus:
 
 
 class Pruned(NamedTuple):
+    """How many tickets and stored messages a prune deleted, or would delete."""
+
     tickets: int
     messages: int
 
@@ -230,6 +238,11 @@ _REVIEW_KEYS = "SELECT 'teams:' || conversation_id || ':' || id FROM teams_messa
 
 
 def default_path() -> Path:
+    """Where the state db is without --db.
+
+    That is readers-digest/state.db in $XDG_STATE_HOME,
+    or in ~/.local/state when that is unset or relative.
+    """
     base = os.environ.get("XDG_STATE_HOME", "")
     # The XDG base directory spec says a relative value is to be ignored.
     root = Path(base) if os.path.isabs(base) else Path.home() / ".local/state"
@@ -262,6 +275,7 @@ class Store:
             raise
 
     def close(self) -> None:
+        """Close the database; leaving the `with` block does the same."""
         self.con.close()
 
     def __enter__(self) -> Self:
@@ -333,6 +347,7 @@ class Store:
         return new
 
     def cursor(self, account: str, folder: str) -> Cursor | None:
+        """Where the last sync of `account`'s `folder` stopped; None when it has never been read."""
         r = self.con.execute("SELECT * FROM cursor WHERE account = ? AND folder = ?", (account, folder)).fetchone()
         return None if r is None else Cursor(account, folder, r["uidvalidity"], r["last_uid"])
 

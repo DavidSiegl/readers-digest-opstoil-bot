@@ -37,6 +37,8 @@ LINK_PREFIX = "https://teams.microsoft.com/l/"
 
 @dataclass(frozen=True)
 class Conversation:
+    """One chat in the reader's chat list, as conversations() read it."""
+
     id: str
     # "1:1", "group" or "meeting".
     kind: str
@@ -53,6 +55,8 @@ class Conversation:
 
 @dataclass(frozen=True)
 class Message:
+    """One text message of a chat, as messages() read it."""
+
     conversation_id: str
     id: str
     # When it arrived, as the read position counts.
