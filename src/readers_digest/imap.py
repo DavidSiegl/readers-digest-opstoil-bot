@@ -337,9 +337,9 @@ def _decode(header: str) -> str:
     """A header's text, folding removed: RFC 2047 words decoded in their charset, other 8-bit bytes read as UTF-8.
 
     `header` is a header as _RAW_HEADERS fetches it. Never raises: invalid
-    UTF-8 becomes U+FFFD, a word in an unknown charset is read as ASCII, a
-    malformed word stays as its literal text, and a base64 word that does
-    not decode is dropped.
+    UTF-8 becomes U+FFFD, and a word that does not decode cleanly comes out
+    as email.policy.default's header parser leaves it: as literal text,
+    partly decoded, or not at all.
     """
     b = header.encode("ascii", "surrogateescape")
     # RFC 2047 forbids 8-bit bytes in an encoded word, but mailers send them.
