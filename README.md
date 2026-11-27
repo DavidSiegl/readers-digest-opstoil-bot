@@ -119,13 +119,18 @@ git clone https://github.com/DavidSiegl/readers-digest-opstoil-bot.git && cd rea
 uv tool install .            # or: pipx install .
 ```
 
-Or install the wheel attached to a
-[release](https://github.com/DavidSiegl/readers-digest-opstoil-bot/releases),
-`uv tool install ./readers_digest_opstoil_bot-0.1.0-py3-none-any.whl`, or
-with Teams `uv tool install './readers_digest_opstoil_bot-0.1.0-py3-none-any.whl[teams]'`.
-The wheel holds no example config: take
-[config.example.toml](config.example.toml) from the repository for the next
-step.
+Or download the wheel attached to a
+[release](https://github.com/DavidSiegl/readers-digest-opstoil-bot/releases)
+and install that, with `<version>` the release's version:
+
+```sh
+uv tool install './readers_digest_opstoil_bot-<version>-py3-none-any.whl'          # or, with Teams:
+uv tool install './readers_digest_opstoil_bot-<version>-py3-none-any.whl[teams]'   # then playwright, as below
+```
+
+The wheel holds no example config: download
+[config.example.toml](config.example.toml) from the repository for
+[Configure](#configure).
 
 With Teams:
 
@@ -285,9 +290,9 @@ git commit -m "Release 0.2.0" pyproject.toml uv.lock
 git tag -a v0.2.0 -m "readers-digest 0.2.0" && git push origin main v0.2.0
 ```
 
-The release workflow tests the tagged commit, checks the tag matches
-`pyproject.toml`, and publishes a GitHub release with the sdist, the wheel
-and the subjects of the commits since the previous tag as its notes.
+[`release.yml`](.github/workflows/release.yml) then tests the tagged
+commit, checks the tag against `pyproject.toml`, and publishes the GitHub
+release with the sdist and the wheel.
 
 ## License
 
