@@ -74,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     g = sub.add_parser("gui", help="open the digest in a window with a tray icon (needs PyGObject, GTK 4 and"
                                    " libadwaita)")
     g.add_argument("--hidden", action="store_true", help="start in the tray, e.g. at login")
+    g.add_argument("--check", action="store_true", help="only check that the window can start: exit 0 if it can")
 
     sub.add_parser("teams-login", help="log in to Teams in the tool's own browser profile (opens a window)")
     sub.add_parser("teams-probe", help="for development: record the shape of Teams' chat calls, no content,"
@@ -82,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     if args.command == "gui":
         # The window loads the config and opens the db itself, in its own process.
-        return gui(args.config, args.db, args.hidden)
+        return gui(args.config, args.db, args.hidden, args.check)
     try:
         cfg = config_.load(args.config or config_.default_path())
     except ConfigError as e:
@@ -243,15 +244,18 @@ def prune(store: Store, days: int, dry_run: bool) -> int:
     return EXIT_OK
 
 
-def gui(config: Path | None, db: Path | None, hidden: bool = False, execve: Callable | None = None) -> int:
+def gui(config: Path | None, db: Path | None, hidden: bool = False, check: bool = False,
+        execve: Callable | None = None) -> int:
     """Run the window: in this process if it can load PyGObject, else on the system Python, replacing this one.
 
     The window runs this CLI, on this Python (`python -m readers_digest`), for sync and review.
+    `check` only loads what the window needs, and the config, and exits.
     """
     argv = ["--cli-python", sys.executable]
     argv += ["--config", str(config)] if config else []
     argv += ["--db", str(db)] if db else []
     argv += ["--hidden"] if hidden else []
+    argv += ["--check"] if check else []
     if importlib.util.find_spec("gi") is not None:
         from readers_digest.gui.window import main as window
         return window(argv)

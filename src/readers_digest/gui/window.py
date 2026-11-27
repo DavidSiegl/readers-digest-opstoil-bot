@@ -11,6 +11,7 @@ bus, which only this user's processes can reach.
 
 import argparse
 import os
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -22,7 +23,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from readers_digest import EXIT_FAILED, __version__, failure_line  # noqa: E402
+from readers_digest import EXIT_FAILED, EXIT_OK, __version__, failure_line  # noqa: E402
 from readers_digest import config as config_  # noqa: E402
 from readers_digest.config import Config, ConfigError  # noqa: E402
 from readers_digest.digest import collect, previous_working_day  # noqa: E402
@@ -39,6 +40,8 @@ APP_NAME = "Toil Digest"
 ICON_DIR = Path(__file__).parent / "icons"
 # The timer may sync in the background; the db is cheap to read again.
 RELOAD_S = 60
+# Seconds `gui --check` may take before a restart is given up: it imports GTK.
+CHECK_S = 30
 # A toast shows one line; a longer error is cut to this many characters.
 TOAST_WIDTH = 200
 
@@ -178,8 +181,11 @@ class Window(Adw.ApplicationWindow):
             # Restart once an install has replaced the code and then left it
             # alone for a tick, so a half-written package is never started.
             # The old code would refuse a db the new one upgraded.
+            # A package that stays unreadable (None) has moved, as a
+            # reinstall on another Python does: gui finds it again.
             code = code_stamp()
-            if code is not None and code != self.code_started and code == self.code_seen:
+            if code != self.code_started and code == self.code_seen:
+                self.code_started = code  # one try per install; a failed one waits for the next
                 self.get_application().restart()
             self.code_seen = code
             self.reload()
@@ -502,20 +508,33 @@ class App(Adw.Application):
     def restart(self) -> None:
         """Replace this process with the window the code now installed draws, shown or hidden as it is now.
 
-        If that cannot start, the window stays as it was, without its tray
-        icon, and a toast says why.
+        Goes through the CLI's `gui`, which finds the package wherever the
+        install put it. When `gui --check` fails (a config that does not
+        load, an install that does not import), this window stays and a
+        toast says why. Blocks for as long as that check runs.
         """
         win = self.get_active_window()
         hidden = win is None or not win.get_visible()
-        argv = [sys.executable, "-m", "readers_digest.gui", "--cli-python", self.opts.cli[0],
-                "--config", str(self.opts.config), "--db", str(self.opts.db), *(["--hidden"] if hidden else [])]
+        argv = [*self.opts.cli, "gui", *(["--hidden"] if hidden else [])]
+
+        def say(why: str) -> None:
+            if win is not None:
+                win.toast(f"not restarting into the new install: {why}", timeout=0)
+
+        try:
+            p = subprocess.run([*argv, "--check"], capture_output=True, text=True, timeout=CHECK_S)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            return say(failure_line(e))
+        if p.returncode != 0:
+            detail = (p.stderr or p.stdout).strip().splitlines()
+            return say(detail[-1] if detail else f"gui --check exited {p.returncode}")
         if self.tray is not None:
             self.tray.close()
+            self.tray = None
         try:
-            os.execv(sys.executable, argv)
+            os.execv(argv[0], argv)
         except OSError as e:
-            if win is not None:
-                win.toast(f"cannot restart into the new install: {e}", timeout=0)
+            say(f"{failure_line(e)} (the tray icon is gone until the window restarts)")
 
     def _window(self) -> Window:
         # Hidden in the tray, the window still exists: closing only hides it.
@@ -526,12 +545,14 @@ def main(argv: list[str] | None = None) -> int:
     """Run the window until it quits, with the options in `argv` (default: sys.argv[1:]); returns an exit status.
 
     A config that cannot be loaded is reported on stderr and returns EXIT_FAILED.
+    With --check, returns EXIT_OK once the window's code and the config have loaded.
     """
     p = argparse.ArgumentParser(prog="readers-digest gui")
     p.add_argument("--cli-python", required=True, help="the Python that runs readers-digest for sync and review")
     p.add_argument("--config", type=Path, default=None)
     p.add_argument("--db", type=Path, default=None)
     p.add_argument("--hidden", action="store_true", help="start in the tray, without opening the window")
+    p.add_argument("--check", action="store_true", help="exit 0 once the window could start")
     args = p.parse_args(argv)
     path = args.config or config_.default_path()
     try:
@@ -539,6 +560,8 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as e:
         print(f"readers-digest: {e}", file=sys.stderr)
         return EXIT_FAILED
+    if args.check:
+        return EXIT_OK
     cli = [args.cli_python, "-m", "readers_digest"]
     cli += ["--config", str(args.config)] if args.config else []
     cli += ["--db", str(args.db)] if args.db else []

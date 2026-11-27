@@ -78,6 +78,16 @@ def test_gui_without_gi_execs_the_system_python(home, monkeypatch):
     assert gui_path.startswith(str(home)) and os.path.islink(os.path.join(gui_path, "readers_digest"))
 
 
+def test_gui_check_is_passed_to_the_window(home, monkeypatch):
+    find_spec = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a: None if name == "gi" else find_spec(name, *a))
+    calls = []
+    monkeypatch.setattr(os, "execve", lambda path, argv, env: calls.append(argv))
+    assert main(home, "gui", "--check") == 0
+    [argv] = calls
+    assert argv[-1] == "--check"
+
+
 def test_review_waits_for_another_review_and_gives_up_without_sending(home, capsys, monkeypatch):
     """Two reviews at once would send the same mail text to the model twice."""
     from readers_digest import lock, review
