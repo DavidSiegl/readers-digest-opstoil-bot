@@ -19,6 +19,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, tzinfo
 
+from readers_digest import failure_line
 from readers_digest.config import Config, ReviewSettings
 from readers_digest.digest import clean, sender_name
 from readers_digest.store import Source, Store, Tag
@@ -215,30 +216,47 @@ def _run(text: str, s: ReviewSettings, run: Callable) -> str:
 
 
 def review(store: Store, cfg: Config, since: datetime, now: datetime, tz: tzinfo | None = None,
-           run: Callable = subprocess.run) -> tuple[str, int]:
-    """Review every entry collect() finds, store their tags, and return (review.md's text, how many entries).
+           run: Callable = subprocess.run) -> tuple[str | None, ReviewError | None]:
+    """Review every entry collect() finds and store their tags: (review.md's text, the error that stopped it).
 
-    The tags of each batch are stored as soon as it is answered, so a
-    failure keeps what was done before it; raises ReviewError then.
+    The entries go to the model in batches, and each batch's tags are
+    stored as soon as it is answered, so collect() never offers those
+    entries again. A ReviewError stops the run and is returned, not
+    raised; the text then holds the batches answered before it and says
+    the rest wait for the next review. The text is None when no entry was
+    answered, or there was none.
     """
     entries = collect(store, cfg, since)
     tags: list[Tag] = []
+    err = None
     for batch in batches(entries):
-        got = ask(batch, cfg.review, run)
+        try:
+            got = ask(batch, cfg.review, run)
+        except ReviewError as e:
+            err = e
+            break
         store.record_tags(got, now)
         tags += got
-    return render(entries, tags, since, now, tz), len(entries)
+    return (render(entries, tags, since, now, tz, err) if tags else None), err
 
 
-def render(entries: list[Entry], tags: list[Tag], since: datetime, now: datetime, tz: tzinfo | None = None) -> str:
-    """review.md: each entry under the act its tag names, with its summary and draft."""
+def render(entries: list[Entry], tags: list[Tag], since: datetime, now: datetime, tz: tzinfo | None = None,
+           stopped: ReviewError | None = None) -> str:
+    """review.md: each entry of `tags` under the act its tag names, with its summary and draft.
+
+    `entries` are all the run was to review; `stopped`, the error that
+    ended it before the entries without a tag were answered.
+    """
     def t(dt: datetime) -> str:
         return dt.astimezone(tz).strftime("%Y-%m-%d %H:%M")
 
     by_key = {x.key: x for x in tags}
-    out = [f"# Review, {t(now)}", "", f"{len(entries)} new entries since {t(since)}.", "",
-           "> Written by a language model from text other people wrote. Check it against the source before acting.",
-           ""]
+    out = [f"# Review, {t(now)}", "", f"{len(entries)} new entries since {t(since)}.", ""]
+    if stopped is not None:
+        out += [f"Stopped after {len(by_key)} of {len(entries)}: {failure_line(stopped)}. The rest wait for the"
+                " next review.", ""]
+    out += ["> Written by a language model from text other people wrote. Check it against the source before acting.",
+            ""]
     for act, heading in ACT_HEADINGS.items():
         these = [(e, by_key[e.key]) for e in entries if e.key in by_key and by_key[e.key].act == act]
         out += [f"## {heading} ({len(these)})", ""]

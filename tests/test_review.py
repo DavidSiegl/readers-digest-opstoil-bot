@@ -133,12 +133,43 @@ def test_review_stores_tags_and_the_next_collect_offers_nothing_new(store):
     store.record([mail("Lunch?", at(2), "<lunch@x>", folder="INBOX", body="12:00 at the canteen?"),
                   mail("Report", at(3), "<report@x>", folder="INBOX", body="Attached.")])
     run = FakeRun()
-    md, n = review.review(store, cfg, at(1), at(4), run=run)
-    assert n == 2
+    md, err = review.review(store, cfg, at(1), at(4), run=run)
+    assert err is None
     assert set(store.tags()) == {"<lunch@x>", "<report@x>"}
     assert "12:00 at the canteen?" in run.prompts[0]
     assert "## For you (2)" in md
     assert collect(store, cfg, at(1)) == []
+
+
+REVIEW_CONFIG = '[review]\ncommand = ["fake-model"]\nreader = "Alex Example"\n'
+
+
+def long_mails(n: int) -> list:
+    """`n` unmatched mails long enough that a batch holds fewer than all of them."""
+    return [mail(f"Mail {i}", at(2), f"<m{i}@x>", folder="INBOX", body="x" * review.ITEM_CHARS) for i in range(n)]
+
+
+def test_a_failed_batch_keeps_the_answered_ones_in_the_text_and_returns_the_error(store):
+    cfg = make_config(REVIEW_CONFIG)
+    store.record(long_mails(5))
+    md, err = review.review(store, cfg, at(1), at(4), run=FakeRun(None, "nope", "nope"))
+    assert isinstance(err, ReviewError) and "twice" in str(err)
+    answered = len(store.tags())
+    assert 0 < answered < 5
+    assert md.count("- **") == answered
+    assert f"Stopped after {answered} of 5" in md and "twice" in md
+    assert len(collect(store, cfg, at(1))) == 5 - answered
+
+
+def test_a_failed_first_batch_gives_no_text(store):
+    store.record(long_mails(5))
+    md, err = review.review(store, make_config(REVIEW_CONFIG), at(1), at(4), run=FakeRun("nope", "nope"))
+    assert md is None and isinstance(err, ReviewError)
+    assert store.tags() == {}
+
+
+def test_nothing_new_gives_no_text_and_no_error(store):
+    assert review.review(store, make_config(REVIEW_CONFIG), at(1), at(4), run=FakeRun()) == (None, None)
 
 
 def test_collect_offers_unmatched_mail_since_oldest_first(store, cfg):

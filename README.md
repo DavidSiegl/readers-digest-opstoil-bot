@@ -146,7 +146,9 @@ tags every entry exactly once; an answer that does not is asked for again
 once, then refused. Each entry gets who has to act (`me`, `team`,
 `nobody`), what it is (`request`, `question`, `alert`, `fyi`, `noise`), a
 summary, and, for mail to you, a reply draft. The digest and the window
-group mail by these tags.
+group mail by these tags. Entries go to the command in batches; when it
+fails part way, `review.md` holds the batches it answered, `review` exits
+1, and the rest wait for the next run.
 
 ## Teams
 

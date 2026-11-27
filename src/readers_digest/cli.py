@@ -197,19 +197,19 @@ def show(store: Store, cfg: Config, out: Path, since: datetime | None, focus_onl
 def review(store: Store, cfg: Config, out: Path, since: datetime | None, quiet: bool) -> int:
     """Review what is new, write review.md to `out` and print it unless `quiet`; an exit status.
 
-    review.md is replaced only when there was something to review, so the
-    last review stays readable until the next one.
+    review.md is replaced only when some entry was answered, so the last
+    review stays readable until the next one. A review the model stopped
+    part way writes what it answered and exits EXIT_FAILED.
     """
     now = _now()
     since = since or previous_working_day(now)
-    try:
-        text, n = review_.review(store, cfg, since, now)
-    except review_.ReviewError as e:
-        print(f"readers-digest: review: {failure_line(e)}", file=sys.stderr)
-        return EXIT_FAILED
-    if n == 0:
-        print(f"review: nothing new since {since.isoformat(timespec='minutes')}")
-        return EXIT_OK
+    text, err = review_.review(store, cfg, since, now)
+    if err is not None:
+        print(f"readers-digest: review: {failure_line(err)}", file=sys.stderr)
+    if text is None:
+        if err is None:
+            print(f"review: nothing new since {since.isoformat(timespec='minutes')}")
+        return EXIT_FAILED if err else EXIT_OK
     try:
         _write_atomic(out, text)
     except OSError as e:
@@ -217,7 +217,7 @@ def review(store: Store, cfg: Config, out: Path, since: datetime | None, quiet: 
         return EXIT_FAILED
     if not quiet:
         print(text, end="")
-    return EXIT_OK
+    return EXIT_FAILED if err else EXIT_OK
 
 
 def match(cfg: Config, subject: str, sender: str) -> int:

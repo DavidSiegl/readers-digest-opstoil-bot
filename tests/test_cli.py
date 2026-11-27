@@ -84,11 +84,20 @@ def test_review_waits_for_another_review_and_gives_up_without_sending(home, caps
 
     monkeypatch.setattr(cli, "REVIEW_WAIT_S", 0)
     sent = []
-    monkeypatch.setattr(review, "review", lambda *a, **k: sent.append(a) or ("", 0))
+    monkeypatch.setattr(review, "review", lambda *a, **k: sent.append(a) or (None, None))
     with lock.held(lock.path("review"), 0, lambda s: None):
         assert main(home, "review", "--quiet") == 1
     assert sent == []
     assert "review still in use" in capsys.readouterr().err
+
+
+def test_a_review_that_stopped_part_way_writes_what_it_got_and_exits_1(home, capsys, monkeypatch):
+    from readers_digest import review
+
+    monkeypatch.setattr(review, "review", lambda *a, **k: ("# Review, partial\n", review.ReviewError("quota")))
+    assert main(home, "review", "--quiet") == 1
+    assert (home / "db" / "review.md").read_text() == "# Review, partial\n"
+    assert "review: quota" in capsys.readouterr().err
 
 
 def test_a_sync_that_finds_the_lock_busy_touches_nothing(home, capsys, monkeypatch):
