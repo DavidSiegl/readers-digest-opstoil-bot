@@ -1,12 +1,13 @@
 """Render docs/social-preview.svg to docs/social-preview.png, the image GitHub shows for the repository.
 
-Run it from the repository root after a change to the SVG or to the app's
-icon, which the SVG draws the bot from:
+Run it after a change to the SVG or to the app's icon, which the SVG draws
+the bot from:
 
     python3 docs/social-preview.py
 
-Needs PyGObject with librsvg and pycairo, as the window does. The PNG is
-uploaded by hand: GitHub, Settings → General → Social preview.
+Needs PyGObject, pycairo (python3-gi-cairo) and librsvg's Rsvg 2.0 typelib
+(gir1.2-rsvg-2.0), which the window does not. The PNG is uploaded by hand:
+GitHub, Settings → General → Social preview.
 """
 
 import base64
@@ -29,10 +30,10 @@ ICON = "../src/readers_digest/gui/icons/readers-digest.svg"
 source = (here / "social-preview.svg").read_text()
 if ICON not in source:
     raise SystemExit(f"social-preview.svg no longer draws {ICON}")
-icon = base64.b64encode((here / ICON).read_bytes()).decode()
-svg = Rsvg.Handle.new_from_data(source.replace(ICON, f"data:image/svg+xml;base64,{icon}").encode())
+icon_b64 = base64.b64encode((here / ICON).read_bytes()).decode()
+preview = Rsvg.Handle.new_from_data(source.replace(ICON, f"data:image/svg+xml;base64,{icon_b64}").encode())
 surface = cairo.ImageSurface(cairo.FORMAT_RGB24, WIDTH, HEIGHT)
 viewport = Rsvg.Rectangle()
 viewport.x, viewport.y, viewport.width, viewport.height = 0, 0, WIDTH, HEIGHT
-svg.render_document(cairo.Context(surface), viewport)
+preview.render_document(cairo.Context(surface), viewport)
 surface.write_to_png(str(here / "social-preview.png"))
