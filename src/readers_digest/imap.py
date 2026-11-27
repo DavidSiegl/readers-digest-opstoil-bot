@@ -18,7 +18,7 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
 from email.errors import HeaderParseError, MessageError
-from email.header import decode_header, make_header
+from email.header import Header, decode_header, make_header
 from email.message import Message
 from email.utils import parsedate_to_datetime
 
@@ -263,17 +263,20 @@ def _fetched_literals(data: list) -> list[tuple[int, bytes, bytes]]:
 
 def _headers(raw: bytes, account: str, f: Folder) -> tuple[Mail | None, str]:
     """(the mail its headers describe, without text; or None and why it cannot be read)."""
+    # compat32 hands back a header with raw 8-bit bytes in it as a Header,
+    # not a str, so every header goes through _decode.
     msg = email.message_from_bytes(raw, policy=email.policy.compat32)
     subject = _decode(msg.get("Subject", ""))
     sender = _decode(msg.get("From", ""))
+    date = _decode(msg.get("Date", ""))
     try:
-        sent_at = parsedate_to_datetime(msg.get("Date", ""))
+        sent_at = parsedate_to_datetime(date)
     except (TypeError, ValueError):
-        return None, f"unparsable Date {msg.get('Date')!r}"
+        return None, f"unparsable Date {date!r}"
     if sent_at.tzinfo is None:
         # "-0000" means the zone is unknown; UTC is the least wrong reading.
         sent_at = sent_at.replace(tzinfo=UTC)
-    message_id = (msg.get("Message-ID") or "").strip()
+    message_id = _decode(msg.get("Message-ID", "")).strip()
     if not message_id:
         # Stable across runs and across UID renumbering, so dedup still works.
         h = hashlib.sha256(f"{sent_at.isoformat()}\0{msg.get('From', '')}\0{subject}".encode()).hexdigest()
@@ -317,12 +320,26 @@ def _part_text(part: Message) -> str:
         return payload.decode("utf-8", errors="replace")
 
 
-def _decode(header: str) -> str:
+def _decode(header: str | Header) -> str:
+    """A header's text: RFC 2047 words decoded, raw 8-bit bytes read as UTF-8, folding removed."""
+    if isinstance(header, Header):
+        # Raw 8-bit bytes, which RFC 5322 forbids but mailers send; their
+        # charset is unknown-8bit, and in practice UTF-8.
+        return "".join(_text(b, cs) for b, cs in decode_header(header)).replace("\r", "").replace("\n", "")
     unfolded = re.sub(r"\r?\n", "", str(header))
     try:
         return str(make_header(decode_header(unfolded)))
     except (HeaderParseError, LookupError, UnicodeDecodeError):
         return unfolded  # kept undecoded: no rule will match it, so it shows as unparsed or as mail
+
+
+def _text(b: bytes | str, charset: str | None) -> str:
+    if isinstance(b, str):
+        return b
+    try:
+        return b.decode(charset if charset and charset != "unknown-8bit" else "utf-8", errors="replace")
+    except LookupError:
+        return b.decode("utf-8", errors="replace")
 
 
 def require_ok(typ: str, data: list, what: str) -> None:

@@ -335,6 +335,18 @@ def test_a_mail_with_an_unparsable_date_is_skipped(cfg):
     assert r.cursor == Cursor("work", "Tickets", 7, 2)
 
 
+def test_raw_8bit_message_id_and_date_headers_do_not_stop_the_sync(cfg):
+    good = msg(1, mid="<good@example.com>")
+    eight_bit_id = msg(1, subject="Grüße", mid="<grüße@example.com>")
+    eight_bit_date = (good[0], raw_mail("hi", "Freitag, 20. Nov 2026 10:00 MEZ ä", mid="<d@example.com>"))
+    server = FakeServer({"Tickets": {1: eight_bit_id, 2: eight_bit_date, 3: good}})
+    r = by_folder(run(server, cfg))["Tickets"]
+    assert [m.message_id for m in r.mails] == ["<grüße@example.com>", "<good@example.com>"]
+    assert r.mails[0].subject == "Grüße"
+    assert [s.split(":")[0] for s in r.skipped] == ["work/Tickets UID 2"]
+    assert r.cursor == Cursor("work", "Tickets", 7, 3)
+
+
 # --- login and password -----------------------------------------------------
 
 
