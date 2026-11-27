@@ -38,6 +38,8 @@ from readers_digest.store import Store, default_path  # noqa: E402
 APP_ID = "io.github.DavidSiegl.ToilDigest"
 ICON_NAME = "readers-digest"
 APP_NAME = "Toil Digest"
+# The project's own name, README.md's title; the window goes by APP_NAME.
+FULL_NAME = "A Reader's Digest Opstoil Bot"
 # The timer may sync in the background; the db is cheap to read again.
 RELOAD_S = 60
 # Seconds `gui --check` may take before a restart is given up: it imports GTK.
@@ -376,7 +378,7 @@ class Window(Adw.ApplicationWindow):
             copyright="© 2026 David Siegl",  # as LICENSE says
             license_type=Gtk.License.MIT_X11,
             website="https://github.com/DavidSiegl/readers-digest-opstoil-bot",
-            comments="Your open tickets, new mail and unread Teams chats, read without changing a thing. "
+            comments=f"{FULL_NAME}: your open tickets, new mail and unread Teams chats, read without changing a thing. "
                      "Review sends new mail and chats to the command the config names.",
         ).present(self)
 
