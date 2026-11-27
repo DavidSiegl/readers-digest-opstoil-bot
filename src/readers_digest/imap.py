@@ -46,7 +46,8 @@ class SourceError(Exception):
         super().__init__(f"{component}: {message}")
         self.component = component
         # The server refused the password. Retrying with the same one only
-        # counts towards a lockout, so nothing in this tool retries it.
+        # counts towards a lockout: nothing retries it within a run, but
+        # the next run does (TODO.md, Open issues).
         self.login_rejected = login_rejected
 
 
@@ -124,7 +125,7 @@ def session(
     TLS is as account.security says, with the system's CA certificates and
     host name checks. Entering raises SourceError: "IMAP" when there is no
     connection or no TLS, or for a rejected LOGIN (then with login_rejected
-    set, and never retried); "password" for a password LOGIN cannot send.
+    set; session never retries it); "password" for a password LOGIN cannot send.
     An error the block raises passes through; a failed LOGOUT is ignored.
     """
     try:
@@ -165,7 +166,7 @@ def _login(m: imaplib.IMAP4, a: Account, password: str) -> None:
     try:
         m.login(a.user, password)
     except (OSError, imaplib.IMAP4.error) as e:
-        raise SourceError("IMAP", f"LOGIN as {a.user} at {a.host} rejected, not retried: {e}",
+        raise SourceError("IMAP", f"LOGIN as {a.user} at {a.host} rejected: {e}",
                           login_rejected=True) from e
 
 
