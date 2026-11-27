@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="src/readers_digest/gui/icons/readers-digest.svg" width="128" height="128"
+       alt="A little bot in reading glasses, reading its digest">
+</p>
+
 # readers-digest-opstoil-bot
 
 A daily digest of your open tickets, new mail and unread Teams chats, read
