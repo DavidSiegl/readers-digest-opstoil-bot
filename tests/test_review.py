@@ -178,3 +178,8 @@ def test_collect_offers_unmatched_mail_since_oldest_first(store, cfg):
                   mail("Older", at(1), "<older@x>", folder="INBOX", body="b"),
                   mail("[OPS-1] ticket", at(2))])
     assert [e.key for e in collect(store, cfg, at(2))] == ["<old@x>", "<new@x>"]
+
+
+def test_the_stop_note_ends_one_sentence_once_when_the_error_ends_in_a_full_stop():
+    md = review.render([], [], at(1), at(4), stopped=ReviewError("the model command failed: quota used up."))
+    assert "quota used up. The rest wait" in md

@@ -253,8 +253,8 @@ def render(entries: list[Entry], tags: list[Tag], since: datetime, now: datetime
     by_key = {x.key: x for x in tags}
     out = [f"# Review, {t(now)}", "", f"{len(entries)} new entries since {t(since)}.", ""]
     if stopped is not None:
-        out += [f"Stopped after {len(by_key)} of {len(entries)}: {failure_line(stopped)}. The rest wait for the"
-                " next review.", ""]
+        out += [f"Stopped after {len(by_key)} of {len(entries)}: {failure_line(stopped).rstrip('.')}."
+                " The rest wait for the next review.", ""]
     out += ["> Written by a language model from text other people wrote. Check it against the source before acting.",
             ""]
     for act, heading in ACT_HEADINGS.items():
