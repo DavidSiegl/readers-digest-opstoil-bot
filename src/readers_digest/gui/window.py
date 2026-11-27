@@ -50,7 +50,11 @@ CSS = b"""
 class Options:
     """What the window was started with."""
 
-    cfg: Config
+    # The config file, read again at every reload: the store refolds every
+    # ticket whenever it is opened with other rules than the last opener's,
+    # so a window holding the rules it started with would undo each rule
+    # change the timer's runs pick up.
+    config: Path
     db: Path
     # The command line that runs readers-digest, with the global options: [python, -m, readers_digest, --config, …].
     cli: list[str]
@@ -71,6 +75,8 @@ class Window(Adw.ApplicationWindow):
     def __init__(self, app: "App", opts: Options):
         super().__init__(application=app, title=APP_NAME, default_width=960, default_height=760)
         self.opts = opts
+        # The config as last read; a reload that cannot read it keeps this one and shows nothing new.
+        self.cfg: Config = config_.load(opts.config)
         # The readers-digest command running now, by its name (_Command.what); None when none is.
         self.running: str | None = None
         # Commands asked for while another ran, started in turn as each ends.
@@ -100,7 +106,7 @@ class Window(Adw.ApplicationWindow):
         self.review_button = Gtk.Button(label="Review",
                                         tooltip_text="Tag new mail and chats (readers-digest review): this sends "
                                                      "their text to the configured review command")
-        self.review_button.set_sensitive(opts.cfg.review.command is not None)
+        self.review_button.set_sensitive(self.cfg.review.command is not None)
         self.review_button.connect("clicked", lambda _b: self.run_cli("review", ["review", "--quiet"]))
         reload = Gtk.Button(icon_name="view-refresh-symbolic", tooltip_text="Read the db again (Ctrl+R)")
         reload.connect("clicked", lambda _b: self.reload())
@@ -162,8 +168,14 @@ class Window(Adw.ApplicationWindow):
         """Read the state db and review.md again and show what changed."""
         now = datetime.now().astimezone()
         try:
-            with Store(self.opts.db, self.opts.cfg.rules) as s:
-                d = collect(s, self.opts.cfg, previous_working_day(now), now)
+            self.cfg = config_.load(self.opts.config)
+        except ConfigError as e:
+            self.toast(f"cannot read the config: {failure_line(e)}")
+            return
+        self._busy(self.running)  # [review] command may have come or gone
+        try:
+            with Store(self.opts.db, self.cfg.rules) as s:
+                d = collect(s, self.cfg, previous_working_day(now), now)
         except Exception as e:  # noqa: BLE001 - shown, and the window stays usable
             self.toast(f"cannot read {self.opts.db}: {failure_line(e)}")
             return
@@ -232,7 +244,7 @@ class Window(Adw.ApplicationWindow):
             text = review = p.read_text(encoding="utf-8")
         except FileNotFoundError:
             text = ("No review yet. Press Review to have the model tag the new mail and chats."
-                    if self.opts.cfg.review.command else "Review is off: set [review] command in the config.")
+                    if self.cfg.review.command else "Review is off: set [review] command in the config.")
         except OSError as e:
             text = f"cannot read {p}: {e}"
         buf = self.review_view.get_buffer()
@@ -292,7 +304,7 @@ class Window(Adw.ApplicationWindow):
     def _busy(self, what: str | None) -> None:
         self.running = what
         self.sync_button.set_sensitive(what is None)
-        self.review_button.set_sensitive(what is None and self.opts.cfg.review.command is not None)
+        self.review_button.set_sensitive(what is None and self.cfg.review.command is not None)
         self.spinner.set_spinning(what is not None)
         then = f"; then {', '.join(c.what for c in self.queued)}" if self.queued else ""
         self.spinner.set_tooltip_text(f"{what} running{then}" if what else None)
@@ -467,14 +479,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--db", type=Path, default=None)
     p.add_argument("--hidden", action="store_true", help="start in the tray, without opening the window")
     args = p.parse_args(argv)
+    path = args.config or config_.default_path()
     try:
-        cfg = config_.load(args.config or config_.default_path())
+        config_.load(path)  # to fail here, on stderr, rather than in the window
     except ConfigError as e:
         print(f"readers-digest: {e}", file=sys.stderr)
         return EXIT_FAILED
     cli = [args.cli_python, "-m", "readers_digest"]
     cli += ["--config", str(args.config)] if args.config else []
     cli += ["--db", str(args.db)] if args.db else []
-    opts = Options(cfg, args.db or default_path(), cli)
+    opts = Options(path, args.db or default_path(), cli)
     # GApplication must not see our own options.
     return App(opts, args.hidden).run([sys.argv[0]])
