@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 1280 640" width="1280" height="640">
+  <!-- The repository's social preview, 1280×640 as GitHub asks; the bot is
+       the app's own icon. social-preview.py renders it to social-preview.png. -->
+  <rect width="1280" height="640" fill="#f7f6f9"/>
+  <rect y="600" width="1280" height="40" fill="#3d3846"/>
+
+  <circle cx="280" cy="320" r="163" fill="#ebe8f0"/>
+  <circle cx="148" cy="190" r="7" fill="none" stroke="#f6c343" stroke-width="4"/>
+  <circle cx="420" cy="178" r="9" fill="none" stroke="#7fe0ff" stroke-width="4"/>
+  <circle cx="440" cy="210" r="5" fill="none" stroke="#f6c343" stroke-width="3"/>
+  <image x="152" y="192" width="256" height="256" xlink:href="../src/readers_digest/gui/icons/readers-digest.svg"/>
+
+  <text x="532" y="236" font-family="DejaVu Sans" font-weight="bold" font-size="62" fill="#241f31">A Reader's Digest</text>
+  <text x="532" y="310" font-family="DejaVu Sans" font-weight="bold" font-size="62" fill="#241f31">Opstoil Bot</text>
+  <text font-family="DejaVu Sans" font-size="31" fill="#3d3846">
+    <tspan x="532" y="378">Your tickets, mail and Teams chats in one</tspan>
+    <tspan x="532" y="420">daily digest, triaged by the model you</tspan>
+    <tspan x="532" y="462">choose. Your mailbox stays untouched.</tspan>
+  </text>
+  <text x="532" y="522" font-family="DejaVu Sans Mono" font-size="20" fill="#1c71d8">IMAP · Teams · any LLM, local or hosted · read-only</text>
+</svg>
