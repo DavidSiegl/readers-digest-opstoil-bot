@@ -100,9 +100,11 @@ class Window(Adw.ApplicationWindow):
         self.actions: frozenset[str] = frozenset()
         self.seen: frozenset[str] = frozenset()
         self.summary = ""
-        # The package's files (code_stamp) as this process loaded them, and
-        # as the last tick found them: an install replaces them under the
-        # window, which keeps running the old code until it restarts.
+        # The package's files (code_stamp): code_started as they were when
+        # this process loaded them, or as the last install a restart was
+        # tried for; code_seen as the last tick found them. An install
+        # replaces them under the window, which keeps running the old code
+        # until it restarts.
         self.code_started = self.code_seen = code_stamp()
 
         self.stack = Adw.ViewStack()
