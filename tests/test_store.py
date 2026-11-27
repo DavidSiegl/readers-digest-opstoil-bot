@@ -177,3 +177,14 @@ def test_opening_an_up_to_date_db_does_not_wait_for_a_writer(store, cfg):
     writer.execute("ROLLBACK")
     writer.close()
     assert opened, "opening waited for the writer's lock"
+
+
+def test_a_teams_message_later_in_the_read_positions_second_stays_unread(store):
+    from dataclasses import replace
+
+    read = at(2).replace(microsecond=300_000)
+    later = replace(msg("c1", "later", 2), sent_at=at(2).replace(microsecond=800_000))
+    store.record_teams([conv("c1", read_at=read)], [later])
+    assert store.expire_text(at(10)) == 0
+    [c], [m] = store.teams()
+    assert (c.read_at, m.sent_at) == (read, later.sent_at)

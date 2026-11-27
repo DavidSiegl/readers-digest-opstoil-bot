@@ -605,10 +605,13 @@ def _statements(script: str) -> Iterator[str]:
 
 def _utc(at: datetime) -> str:
     # Every timestamp is stored as fixed-width UTC text, so ORDER BY and
-    # comparisons on the column are chronological.
+    # comparisons on the column are chronological. Microseconds, because
+    # Teams' read position and its messages differ within a second. Rows
+    # written before had whole seconds; "+" sorts before ".", so they still
+    # order before any later time in their second.
     if at.tzinfo is None:
         raise ValueError(f"timestamp {at} has no timezone")
-    return at.astimezone(UTC).isoformat(timespec="seconds")
+    return at.astimezone(UTC).isoformat(timespec="microseconds")
 
 
 def _opt_utc(at: datetime | None) -> str | None:
