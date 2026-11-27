@@ -18,7 +18,7 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
 from email.errors import HeaderParseError, MessageError
-from email.header import Header, decode_header, make_header
+from email.header import Header, decode_header
 from email.message import Message
 from email.utils import parsedate_to_datetime
 
@@ -324,13 +324,16 @@ def _decode(header: str | Header) -> str:
     """A header's text: RFC 2047 words decoded, raw 8-bit bytes read as UTF-8, folding removed."""
     if isinstance(header, Header):
         # Raw 8-bit bytes, which RFC 5322 forbids but mailers send; their
-        # charset is unknown-8bit, and in practice UTF-8.
-        return "".join(_text(b, cs) for b, cs in decode_header(header)).replace("\r", "").replace("\n", "")
+        # charset is unknown-8bit, and in practice UTF-8. Made a str first,
+        # so that encoded words beside them are decoded below too.
+        header = "".join(_text(b, cs) for b, cs in decode_header(header))
     unfolded = re.sub(r"\r?\n", "", str(header))
     try:
-        return str(make_header(decode_header(unfolded)))
-    except (HeaderParseError, LookupError, UnicodeDecodeError):
+        parts = decode_header(unfolded)
+    except HeaderParseError:
         return unfolded  # kept undecoded: no rule will match it, so it shows as unparsed or as mail
+    # decode_header gives the text between encoded words as raw-unicode-escape bytes, with no charset.
+    return "".join(_text(b, cs or "raw-unicode-escape") for b, cs in parts)
 
 
 def _text(b: bytes | str, charset: str | None) -> str:

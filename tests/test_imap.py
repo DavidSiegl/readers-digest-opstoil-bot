@@ -397,3 +397,9 @@ def test_read_password_failures_are_password_errors(run):
     with pytest.raises(SourceError) as e:
         read_password(("pass", "show", "mail"), run=run)
     assert e.value.component == "password"
+
+
+def test_a_raw_8bit_subject_still_has_its_encoded_words_decoded(cfg):
+    server = FakeServer({"Tickets": {1: msg(1, subject="=?utf-8?q?Ticket_=5BT-1=5D?= Grüße")}})
+    [m] = by_folder(run(server, cfg))["Tickets"].mails
+    assert m.subject == "Ticket [T-1] Grüße"
