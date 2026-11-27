@@ -237,6 +237,11 @@ def _digest(t: "_Table") -> DigestSettings:
         state_order=tuple(t.strings("state_order", [])),
     )
     t.done()
+    # A ticket quiet for window_days is no longer listed at all, so it can
+    # be listed as stale only before then.
+    if s.stale_days >= s.window_days:
+        raise ConfigError(f"{t.where}stale_days: must be less than window_days ({s.window_days}), or no ticket is"
+                          " ever listed as stale")
     return s
 
 

@@ -26,6 +26,7 @@ def test_defaults_and_derived_values(cfg):
     ("[sync]\nbackfill_days = true\n", "backfill_days: must be a whole number"),
     ("[sync]\ntimeout_s = 0\n", "timeout_s: must be more than 0"),
     ("[teams]\nenabled = 1\n", "enabled: must be true or false"),
+    ("[digest]\nstale_days = 14\nwindow_days = 14\n", "stale_days: must be less than window_days"),
     ("[[rule]]\nname = \"x\"\nsubject = \"(\"\n", "not a regular expression"),
     ("[[rule]]\nname = \"x\"\nsubject = \"x\"\n", "no .*ticket"),
     ("[[rule]]\nname = \"update\"\nsubject = \"(?P<ticket>x)\"\n", "used twice"),
