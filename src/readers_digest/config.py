@@ -71,8 +71,10 @@ class SyncSettings:
 
     # Days of mail a folder's first sync reads, and every sync after its UIDVALIDITY changed.
     backfill_days: int = 30
-    # Days re-read on every sync, whatever the cursor says, in case the server
-    # renumbered without changing UIDVALIDITY; Message-ID dedup drops the repeats.
+    # Days re-read on every sync, whatever the cursor says. Some IMAP gateways
+    # renumber a folder without changing its UIDVALIDITY, which would hide
+    # what they renumbered below the cursor; Message-ID dedup drops the
+    # repeats. At 0 a sync still re-reads today's mail.
     overlap_days: int = 2
     # A mail's text is fetched only when it is this recent, and dropped once older.
     retention_days: int = 7

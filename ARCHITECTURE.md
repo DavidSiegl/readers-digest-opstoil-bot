@@ -25,7 +25,8 @@ that writes; its module docstring lists every command it sends, and the
 tests assert that list. `teams/web.py` lets only GET, HEAD and OPTIONS
 through to Teams' chat service, so it sends no message, reaction or read
 mark there; the client's other calls go out as a browser's would (TODO.md, Open
-issues). A rejected IMAP login is never retried, and a Teams
+issues). A rejected IMAP login is not retried within a run (the next run
+tries again: TODO.md, Open issues), and a Teams
 login that needs a password stops the run instead of typing one.
 
 **All input is untrusted.** Subjects, names, mail bodies and chat messages

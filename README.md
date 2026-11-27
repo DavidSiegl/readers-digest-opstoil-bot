@@ -57,8 +57,9 @@ library of Python 3.12 or later.
   in the tool's browser profile, so it never sends a message, reacts, or
   marks a chat read. The rest of the Teams web app runs as in a browser
   while a sync reads, so colleagues may see you as online meanwhile.
-- It never types a password into a web page, and never retries a password
-  the IMAP server rejected: a retry only counts towards a lockout.
+- It never types a password into a web page. A password the IMAP server
+  rejected is not tried again in the same run, but the next sync tries
+  it again (TODO.md, Open issues).
 - It never runs or sends what a model wrote. A reply draft goes to the
   clipboard when you click its button; sending it is up to you.
 
