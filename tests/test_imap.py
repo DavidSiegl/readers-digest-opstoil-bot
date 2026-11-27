@@ -436,3 +436,12 @@ def test_a_non_ascii_user_is_refused_before_login(cfg):
     with pytest.raises(SourceError, match="not ASCII"):
         fetch(account, PASSWORD, {}, TODAY, cfg.sync, connect=lambda a, t: FakeIMAP(server))
     assert not any(verb(c) == "LOGIN" for c in server.commands)
+
+
+def test_a_folder_that_cannot_be_read_does_not_cost_the_others_their_mail(cfg):
+    server = FakeServer({"INBOX": dict([(1, msg(1, "kept"))])})
+    del server.mailboxes["Tickets"]
+    got = by_folder(run(server, cfg))
+    assert "NO folder not found" in got["Tickets"].failure
+    assert (got["Tickets"].mails, got["Tickets"].cursor) == ([], None)
+    assert got["INBOX"].failure is None and [m.subject for m in got["INBOX"].mails] == ["kept"]

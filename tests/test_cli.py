@@ -141,3 +141,17 @@ def test_a_browser_driver_error_says_it_came_from_the_browser():
     PlaywrightError = type("Error", (Exception,), {"__module__": "playwright._impl._errors"})
     assert failure_line(PlaywrightError("Target closed\ncall log: ...")) == "browser: Target closed"
     assert failure_line(OSError("disk full")) == "disk full"
+
+
+def test_sync_stores_the_folders_it_read_and_reports_the_one_it_could_not(store, cfg, monkeypatch, capsys):
+    from readers_digest import imap
+    from readers_digest.store import Cursor, Source
+
+    ok = imap.FolderResult("work", "INBOX", [mail("Hi", at(3), folder="INBOX")], Cursor("work", "INBOX", 7, 1), False)
+    bad = imap.FolderResult("work", "Tickets", [], None, False, failure="IMAP: EXAMINE Tickets: NO gone")
+    monkeypatch.setattr(imap, "read_password", lambda c: "pw")
+    monkeypatch.setattr(imap, "fetch", lambda *a, **k: [bad, ok])
+    assert cli.sync(store, cfg) == 1
+    assert store.cursor("work", "INBOX") == Cursor("work", "INBOX", 7, 1)
+    assert "work/Tickets: IMAP: EXAMINE Tickets: NO gone" in store.status(Source.MAIL).last_error
+    assert "work/Tickets" in capsys.readouterr().err

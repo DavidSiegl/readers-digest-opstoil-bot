@@ -134,8 +134,9 @@ def sync(store: Store, cfg: Config, rescan: bool = False) -> int:
     """Read every account's new mail into `store`; returns an exit status.
 
     With rescan, no cursor is passed, so every folder reads its last
-    backfill_days again. An account that fails does not stop the others;
-    the failures are recorded as Source.MAIL's, for the digest's banner.
+    backfill_days again. An account or folder that fails does not stop the
+    others; the failures are recorded as Source.MAIL's, for the digest's
+    banner.
     """
     now = datetime.now(UTC)
     failures = []
@@ -149,6 +150,9 @@ def sync(store: Store, cfg: Config, rescan: bool = False) -> int:
                 failures.append(f"{a.name}: {e}")
                 continue
             for r in results:
+                if r.failure is not None:
+                    failures.append(f"{r.account}/{r.folder}: {r.failure}")
+                    continue
                 new = store.record(r.mails, r.cursor)
                 for why in r.skipped:
                     print(f"readers-digest: skipped {why}", file=sys.stderr)

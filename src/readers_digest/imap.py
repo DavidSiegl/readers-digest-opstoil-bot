@@ -65,6 +65,9 @@ class FolderResult:
     backfilled: bool
     # One line per mail that could not be read and was left out.
     skipped: list[str] = field(default_factory=list)
+    # Why the folder could not be read, or None when it was: then mails is
+    # empty and cursor None, so its cursor stays where it was.
+    failure: str | None = None
 
 
 def read_password(command: tuple[str, ...], run: Callable = subprocess.run) -> str:
@@ -101,15 +104,22 @@ def fetch(
     without a usable one reads the last backfill_days. Every sync also
     re-reads the last overlap_days. The text of a `mail` folder's mail is
     fetched only within retention_days and under max_body_bytes; otherwise
-    its body_note says why not. Raises SourceError as session() does, and
-    "IMAP" for a failure while reading. `connect` stands in for opening the
-    connection in tests.
+    its body_note says why not. A folder the server refuses or answers
+    oddly gets a result with its failure, and the others are still read.
+    Raises SourceError as session() does, and "IMAP" when the connection
+    breaks while reading. `connect` stands in for opening the connection
+    in tests.
     """
+    out = []
     with session(account, password, settings.timeout_s, connect=connect) as m:
-        try:
-            return [_fetch_folder(m, account, f, cursors.get(f.name), today, settings) for f in account.folders]
-        except (OSError, imaplib.IMAP4.error) as e:
-            raise SourceError("IMAP", f"reading {account.name}: {e}") from e
+        for f in account.folders:
+            try:
+                out.append(_fetch_folder(m, account, f, cursors.get(f.name), today, settings))
+            except (OSError, imaplib.IMAP4.abort) as e:
+                raise SourceError("IMAP", f"reading {account.name}: {e}") from e
+            except (SourceError, imaplib.IMAP4.error) as e:
+                out.append(FolderResult(account.name, f.name, [], None, False, failure=str(e)))
+    return out
 
 
 @contextmanager
