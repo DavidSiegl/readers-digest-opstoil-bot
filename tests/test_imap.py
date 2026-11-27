@@ -23,7 +23,9 @@ PASSWORD = 'p"w\\x'
 TODAY = date(2026, 11, 20)
 MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
-# Everything fetch may ever send. imaplib itself sends CAPABILITY on connect.
+# Everything fetch may ever send. imaplib itself sends CAPABILITY: on connect
+# in older releases, after LOGIN in newer ones (3.13.18), which take the
+# capabilities the greeting carries instead.
 READ_ONLY = {"CAPABILITY", "LOGIN", "EXAMINE", "UID SEARCH", "UID FETCH", "LOGOUT"}
 # A fetch item that would set \Seen.
 NON_PEEK_BODY = re.compile(r"(?<!\.PEEK)\bBODY\[")
@@ -217,7 +219,7 @@ def imap_date(days_ago):
 def test_folders_are_examined_read_only_in_config_order(cfg):
     server = FakeServer()
     run(server, cfg)
-    assert server.commands[:2] == ["CAPABILITY", f"LOGIN {USER}"]
+    assert set(server.commands[:server.commands.index(f"LOGIN {USER}")]) <= {"CAPABILITY"}
     assert [c for c in server.commands if verb(c) == "EXAMINE"] == ['EXAMINE "Tickets"', 'EXAMINE "INBOX"']
 
 
