@@ -103,11 +103,10 @@ def main(argv: list[str] | None = None) -> int:
                 code = sync(store, cfg, args.rescan)
                 if cfg.teams.enabled and not args.no_teams:
                     code = max(code, teams_cmds.sync(store, db, cfg.teams))
+                store.expire_text(datetime.now(UTC) - timedelta(days=cfg.sync.retention_days))
                 return code
 
-            code = _locked("sync", SYNC_WAIT_S, sync_all)
-            store.expire_text(datetime.now(UTC) - timedelta(days=cfg.sync.retention_days))
-            return code
+            return _locked("sync", SYNC_WAIT_S, sync_all)
         if args.command == "show":
             return show(store, cfg, db.parent / "digest.md", args.since, not args.all, args.notify, args.quiet)
         if args.command == "review":

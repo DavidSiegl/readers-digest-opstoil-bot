@@ -88,3 +88,17 @@ def test_review_waits_for_another_review_and_gives_up_without_sending(home, caps
         assert main(home, "review", "--quiet") == 1
     assert sent == []
     assert "review still in use" in capsys.readouterr().err
+
+
+def test_a_sync_that_finds_the_lock_busy_touches_nothing(home, capsys, monkeypatch):
+    from readers_digest import lock
+    from readers_digest.store import Store as RealStore
+
+    monkeypatch.setattr(cli, "SYNC_WAIT_S", 0)
+    expired = []
+    monkeypatch.setattr(RealStore, "expire_text", lambda self, before: expired.append(before) or 0)
+    monkeypatch.setattr(cli, "sync", lambda *a, **k: pytest.fail("sync ran without the lock"))
+    with lock.held(lock.path("sync"), 0, lambda s: None):
+        assert main(home, "sync") == 1
+    assert expired == []
+    assert "nothing done" in capsys.readouterr().err
