@@ -202,14 +202,14 @@ class Tag:
 
 
 class Source(StrEnum):
-    """What a run reads, each with its own status."""
+    """What a run reads; each has its own LastRuns."""
 
     MAIL = "mail"
     TEAMS = "teams"
 
 
 @dataclass(frozen=True)
-class RunStatus:
+class LastRuns:
     """When a Source was last read successfully and when it last failed, with that failure's one-line error."""
 
     last_ok_at: datetime | None
@@ -419,12 +419,12 @@ class Store:
             self.con.execute("INSERT INTO run (source) VALUES (?) ON CONFLICT (source) DO NOTHING", (source.value,))
             self.con.execute(f"UPDATE run SET {assignments} WHERE source = ?", (*values, source.value))
 
-    def status(self, source: Source) -> RunStatus:
+    def last_runs(self, source: Source) -> LastRuns:
         """How the latest reads of `source` went; all None when it was never read."""
         r = self.con.execute("SELECT * FROM run WHERE source = ?", (source.value,)).fetchone()
         if r is None:
-            return RunStatus(None, None, None)
-        return RunStatus(_dt(r["last_ok_at"]), _dt(r["last_error_at"]), r["last_error"])
+            return LastRuns(None, None, None)
+        return LastRuns(_dt(r["last_ok_at"]), _dt(r["last_error_at"]), r["last_error"])
 
     def record_teams(self, convs: Iterable[Conversation], msgs: Iterable[Message]) -> int:
         """Replace the stored chat list with `convs`, and store the messages of `msgs` not stored yet, atomically.

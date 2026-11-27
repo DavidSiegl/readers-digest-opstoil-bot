@@ -153,7 +153,7 @@ def test_sync_stores_the_folders_it_read_and_reports_the_one_it_could_not(store,
     monkeypatch.setattr(imap, "fetch", lambda *a, **k: [bad, ok])
     assert cli.sync(store, cfg) == 1
     assert store.cursor("work", "INBOX") == Cursor("work", "INBOX", 7, 1)
-    assert "work/Tickets: IMAP: EXAMINE Tickets: NO gone" in store.status(Source.MAIL).last_error
+    assert "work/Tickets: IMAP: EXAMINE Tickets: NO gone" in store.last_runs(Source.MAIL).last_error
     assert "work/Tickets" in capsys.readouterr().err
 
 

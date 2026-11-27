@@ -72,7 +72,7 @@ def collect(store: Store, cfg: Config, since: datetime) -> list[Entry]:
         out.append(Entry(m.message_id, f"m{n}", f"mail from {sender_name(m.sender)}: {clean(m.subject)}",
                          f"Mail in {m.account}/{m.folder}\nFrom: {m.sender}\nSubject: {m.subject}\n"
                          f"Sent: {m.sent_at.isoformat(timespec='minutes')}\n\n{body}"))
-    if cfg.teams.enabled and store.status(Source.TEAMS).last_ok_at:
+    if cfg.teams.enabled and store.last_runs(Source.TEAMS).last_ok_at:
         out += _teams_entries(store, cfg.review.reader)
     return [e for e in out if e.key not in tags]
 

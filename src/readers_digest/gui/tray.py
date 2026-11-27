@@ -103,9 +103,14 @@ class Tray:
         self.activate = activate
         # dbusmenu ids: 0 is the root, then one per entry; a None label is a separator.
         self.menu = menu
+        # The tooltip's text, plain; escaped only when sent.
         self.tooltip = ""
-        self.attention = False
+        # The icon shows its attention dot: something new the reader has not seen.
+        self.needs_attention = False
+        # A tray's watcher has the icon registered now, as far as the bus said last.
         self.registered = False
+        # The icon, and the one with the dot, as pixel data for trays that
+        # cannot look an icon up by name.
         self.pixmaps = _pixmaps(icon_dir / f"{icon_name}.svg")
         self.attention_name = f"{icon_name}-attention"
         self.attention_pixmaps = _pixmaps(icon_dir / f"{self.attention_name}.svg")
@@ -131,13 +136,13 @@ class Tray:
 
     def set_attention(self, on: bool) -> None:
         """Show the icon with its dot (`on`) or without it."""
-        if on != self.attention:
-            self.attention = on
+        if on != self.needs_attention:
+            self.needs_attention = on
             self._emit("NewIcon")
             self._emit("NewStatus", GLib.Variant("(s)", (self._status(),)))
 
     def _status(self) -> str:
-        return "NeedsAttention" if self.attention else "Active"
+        return "NeedsAttention" if self.needs_attention else "Active"
 
     def _emit(self, signal: str, args: GLib.Variant | None = None) -> None:
         try:
@@ -170,9 +175,9 @@ class Tray:
             "Title": ("s", self.title),
             "Status": ("s", self._status()),
             "WindowId": ("u", 0),
-            "IconName": ("s", self.attention_name if self.attention else self.icon_name),
+            "IconName": ("s", self.attention_name if self.needs_attention else self.icon_name),
             "IconThemePath": ("s", str(self.icon_dir)),
-            "IconPixmap": ("a(iiay)", self.attention_pixmaps if self.attention else self.pixmaps),
+            "IconPixmap": ("a(iiay)", self.attention_pixmaps if self.needs_attention else self.pixmaps),
             "AttentionIconName": ("s", self.attention_name),
             "AttentionIconPixmap": ("a(iiay)", self.attention_pixmaps),
             "ToolTip": ("(sa(iiay)ss)", ("", [], self.title, GLib.markup_escape_text(self.tooltip))),

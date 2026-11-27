@@ -10,7 +10,7 @@ from datetime import datetime, tzinfo
 from typing import NamedTuple
 
 from readers_digest.digest import Digest, age, clean, mail_group, said, sender_name
-from readers_digest.store import Mail, RunStatus, Tag, Ticket
+from readers_digest.store import LastRuns, Mail, Tag, Ticket
 from readers_digest.teams.chat import Unread, link, review_key
 
 TIME_FORMAT = "%d.%m. %H:%M"
@@ -93,7 +93,7 @@ def build(d: Digest, tz: tzinfo | None = None) -> View:
     if d.teams_enabled:
         pages.append(_teams(d, t))
     return View(
-        title=f"Synced {t(d.mail_status.last_ok_at)}" if d.mail_status.last_ok_at else "Never synced",
+        title=f"Synced {t(d.mail_runs.last_ok_at)}" if d.mail_runs.last_ok_at else "Never synced",
         banners=_banners(d, t),
         pages=tuple(pages),
         footer=_footer(d, t),
@@ -120,22 +120,22 @@ def _actions(d: Digest) -> frozenset[str]:
     out.update(f"mail {m.message_id}" for _, _, ms in d.mail for m in ms if mail_group(d.tags.get(m.message_id)) == 0)
     if d.teams_enabled:
         out.update(f"teams {review_key(u)}" for u in d.teams_unread)
-    for name, st in (("mail", d.mail_status), ("teams", d.teams_status)):
+    for name, st in (("mail", d.mail_runs), ("teams", d.teams_runs)):
         if st.failed and (name == "mail" or d.teams_enabled):
             out.add(f"{name} failed {st.last_error_at.isoformat()}")
     return frozenset(out)
 
 
 def _banners(d: Digest, t) -> tuple[str, ...]:
-    def banner(what: str, st: RunStatus) -> str:
+    def banner(what: str, st: LastRuns) -> str:
         when = f"last good one {t(st.last_ok_at)}" if st.last_ok_at else "none has succeeded yet"
         return f"{what} failed at {t(st.last_error_at)} ({when}): {clean(st.last_error or '')}"
 
     out = []
-    if d.mail_status.failed:
-        out.append(banner("Mail sync", d.mail_status))
-    if d.teams_enabled and d.teams_status.failed:
-        out.append(banner("Teams read", d.teams_status))
+    if d.mail_runs.failed:
+        out.append(banner("Mail sync", d.mail_runs))
+    if d.teams_enabled and d.teams_runs.failed:
+        out.append(banner("Teams read", d.teams_runs))
     return tuple(out)
 
 
@@ -225,7 +225,7 @@ def _mail_row(m: Mail, d: Digest, t) -> Row:
 def _teams(d: Digest, t) -> Page:
     """What Teams marks unread, by conversation, with the review's tag and draft."""
     rows = tuple(_unread_row(u, d, t) for u in d.teams_unread)
-    title = "Unread in Teams" if d.teams_status.last_ok_at else "Teams not read yet"
+    title = "Unread in Teams" if d.teams_runs.last_ok_at else "Teams not read yet"
     return Page("teams", "Teams", "system-users-symbolic", (Group(title, rows),), len(rows))
 
 
@@ -250,9 +250,9 @@ def _unread_row(u: Unread, d: Digest, t) -> Row:
 
 
 def _footer(d: Digest, t) -> str:
-    parts = [f"Last sync {t(d.mail_status.last_ok_at) if d.mail_status.last_ok_at else 'never'}"]
-    if d.teams_enabled and d.teams_status.last_ok_at:
-        parts.append(f"Teams {t(d.teams_status.last_ok_at)}")
+    parts = [f"Last sync {t(d.mail_runs.last_ok_at) if d.mail_runs.last_ok_at else 'never'}"]
+    if d.teams_enabled and d.teams_runs.last_ok_at:
+        parts.append(f"Teams {t(d.teams_runs.last_ok_at)}")
     parts.append(f"{d.unparsed} unparsed")
     if d.hidden:
         parts.append(f"{d.hidden} quiet ticket{'s' if d.hidden > 1 else ''} not shown")

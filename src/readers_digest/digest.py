@@ -11,7 +11,7 @@ from datetime import datetime, time, timedelta, tzinfo
 from email.utils import parseaddr
 
 from readers_digest.config import Config, DigestSettings
-from readers_digest.store import Mail, RunStatus, Source, Store, Tag, Ticket
+from readers_digest.store import LastRuns, Mail, Source, Store, Tag, Ticket
 from readers_digest.teams.chat import Message, Unread, display_title, link, unread
 
 # The subjects of unparsed mail the footer lists, newest first.
@@ -54,10 +54,10 @@ class Digest:
     # The review's tag of each reviewed mail (by Message-ID) and Teams
     # conversation (by teams.chat.review_key).
     tags: dict[str, Tag]
-    mail_status: RunStatus
+    mail_runs: LastRuns
     # Teams is read at all: its section is shown only then.
     teams_enabled: bool
-    teams_status: RunStatus
+    teams_runs: LastRuns
     # What Teams marks unread, by conversation, most recent first. Teams'
     # own read marker decides, not `since`.
     teams_unread: list[Unread]
@@ -102,9 +102,9 @@ def collect(store: Store, cfg: Config, since: datetime, now: datetime, focus_onl
         links={t.id: url for t in open_ + closed if (url := cfg.rules.url(t.rule, t.id))},
         mail=[(a, f, [m for m in mails if (m.account, m.folder) == (a, f)]) for a, f in cfg.mailboxes()],
         tags=store.tags(),
-        mail_status=store.status(Source.MAIL),
+        mail_runs=store.last_runs(Source.MAIL),
         teams_enabled=cfg.teams.enabled,
-        teams_status=store.status(Source.TEAMS),
+        teams_runs=store.last_runs(Source.TEAMS),
         teams_unread=teams_unread,
         teams_titles={u.conversation.id: display_title(u.conversation, by_conv.get(u.conversation.id, []))
                       for u in teams_unread},
@@ -143,9 +143,9 @@ def format_digest(d: Digest, tz: tzinfo | None = None) -> str:
         return dt.astimezone(tz).strftime("%Y-%m-%d %H:%M")
 
     out = [f"# {'Tickets in focus' if d.focus_only else 'All tickets'}, {t(d.now)}", ""]
-    out += _banner("Last mail sync", "The data below is from the last successful sync", d.mail_status, t)
+    out += _banner("Last mail sync", "The data below is from the last successful sync", d.mail_runs, t)
     if d.teams_enabled:
-        out += _banner("Last Teams read", "Chats are from the last successful read", d.teams_status, t)
+        out += _banner("Last Teams read", "Chats are from the last successful read", d.teams_runs, t)
 
     n_open = sum(len(ts) for _, ts in d.open_by_state)
     out += [f"## Open ({n_open})", ""]
@@ -171,13 +171,13 @@ def format_digest(d: Digest, tz: tzinfo | None = None) -> str:
         _section(out, f"New mail in {md(account)}/{md(folder)} since {t(d.since)}", lines, len(mails))
 
     # Only once Teams has been read: "None" would be a claim before then.
-    if d.teams_enabled and d.teams_status.last_ok_at:
+    if d.teams_enabled and d.teams_runs.last_ok_at:
         _section(out, "Unread in Teams", [_unread_line(u, d, t) for u in d.teams_unread])
 
-    last_ok = t(d.mail_status.last_ok_at) if d.mail_status.last_ok_at else "never"
+    last_ok = t(d.mail_runs.last_ok_at) if d.mail_runs.last_ok_at else "never"
     footer = f"Last successful sync: {last_ok} · Unparsed subjects: {d.unparsed}"
-    if d.teams_enabled and d.teams_status.last_ok_at:
-        footer += f" · Last Teams read: {t(d.teams_status.last_ok_at)}"
+    if d.teams_enabled and d.teams_runs.last_ok_at:
+        footer += f" · Last Teams read: {t(d.teams_runs.last_ok_at)}"
     out += ["---", "", footer]
     if d.hidden:
         out.append(f"Not shown: {d.hidden} open ticket{'s' if d.hidden != 1 else ''} with no mail in the last "
@@ -203,7 +203,7 @@ def previous_working_day(now: datetime, tz: tzinfo | None = None) -> datetime:
     return midnight.replace(tzinfo=tz) if tz is not None else midnight.astimezone()
 
 
-def _banner(what: str, data_from: str, st: RunStatus, t: Callable[[datetime], str]) -> list[str]:
+def _banner(what: str, data_from: str, st: LastRuns, t: Callable[[datetime], str]) -> list[str]:
     if not st.failed:
         return []
     return [f"> **{what} failed** at {t(st.last_error_at)}: {md(st.last_error or '')}",

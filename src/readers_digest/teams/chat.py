@@ -117,19 +117,19 @@ def conversations(me: dict, mri: str, now: datetime) -> list[Conversation]:
     return out
 
 
-def messages(conversation_id: str, data: dict, me: str) -> list[Message]:
-    """The text messages in one page of a conversation's messages (`data`), oldest first; `me` is the reader's MRI.
+def messages(conversation_id: str, page: dict, me: str) -> list[Message]:
+    """The text messages in one page of a conversation's messages (`page`), oldest first; `me` is the reader's MRI.
 
-    Raises ValueError when `data` is not such a page at all, or a message in
+    Raises ValueError when `page` is not such a page at all, or a message in
     it has a field of an unexpected type.
     """
-    if not isinstance(data, dict):
-        raise ValueError(f"the page of messages is a {type(data).__name__}, not an object")
+    if not isinstance(page, dict):
+        raise ValueError(f"the page of messages is a {type(page).__name__}, not an object")
     out = []
     # A field of an unexpected type fails on use (.get on a string, .strip
     # on a number): the reply's shape has changed, as for a non-object.
     try:
-        for m in data.get("messages") or []:
+        for m in page.get("messages") or []:
             if not isinstance(m, dict):
                 continue
             props = m.get("properties") or {}
@@ -149,21 +149,21 @@ def messages(conversation_id: str, data: dict, me: str) -> list[Message]:
     return sorted(out, key=lambda m: (m.sent_at, m.id))
 
 
-def backward_link(data: dict) -> str:
-    """The URL of the page of older messages that one page (`data`) names, or "" when it names none."""
-    meta = data.get("_metadata")
+def backward_link(page: dict) -> str:
+    """The URL of the page of older messages that `page`, one page of a conversation's messages, names; "" if none."""
+    meta = page.get("_metadata")
     url = meta.get("backwardLink") if isinstance(meta, dict) else None
     return url if isinstance(url, str) else ""
 
 
-def oldest_arrival(data: dict) -> datetime | None:
-    """When the oldest message of one page of a conversation's messages (`data`) arrived, of any type.
+def oldest_arrival(page: dict) -> datetime | None:
+    """When the oldest message of one page of a conversation's messages (`page`) arrived, of any type.
 
     Calls, joins and renames count, unlike in messages(): a page of them
     still says how far back the page reaches. None when no message in it
-    has a readable time. `data` is a page messages() accepted.
+    has a readable time. `page` is a page messages() accepted.
     """
-    times = [t for m in data.get("messages") or [] if isinstance(m, dict)
+    times = [t for m in page.get("messages") or [] if isinstance(m, dict)
              if (t := _time(m.get("originalarrivaltime") or m.get("composetime"))) is not None]
     return min(times, default=None)
 

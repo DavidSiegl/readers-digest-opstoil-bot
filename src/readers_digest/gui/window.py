@@ -99,6 +99,7 @@ class Window(Adw.ApplicationWindow):
         # open counts as new once.
         self.actions: frozenset[str] = frozenset()
         self.seen: frozenset[str] = frozenset()
+        # The last reload's digest in a line or two (model.summary), for the tray's tooltip.
         self.summary = ""
         # The package's files (code_stamp): code_started as they were when
         # this process loaded them, or as the last install a restart was

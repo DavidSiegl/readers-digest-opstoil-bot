@@ -75,15 +75,15 @@ def test_naive_timestamps_are_refused(store):
         store.record([mail("x", at(1).replace(tzinfo=None))])
 
 
-def test_run_status(store):
-    assert not store.status(Source.MAIL).failed
+def test_last_runs(store):
+    assert not store.last_runs(Source.MAIL).failed
     store.mark_ok(Source.MAIL, at(1))
     store.mark_failed(Source.MAIL, at(2), "IMAP: down")
-    st = store.status(Source.MAIL)
+    st = store.last_runs(Source.MAIL)
     assert st.failed and st.last_error == "IMAP: down"
     store.mark_ok(Source.MAIL, at(3))
-    assert not store.status(Source.MAIL).failed
-    assert store.status(Source.TEAMS).last_ok_at is None
+    assert not store.last_runs(Source.MAIL).failed
+    assert store.last_runs(Source.TEAMS).last_ok_at is None
 
 
 def conv(cid="c1", unread=True, read_at=None):

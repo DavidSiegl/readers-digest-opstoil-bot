@@ -34,7 +34,7 @@ def decide(store: Store, cfg: Config, since: datetime, now: datetime) -> tuple[s
     """
     parts, keys = [], []
     for source in Source:
-        st = store.status(source)
+        st = store.last_runs(source)
         key = FAILURE + source.value
         prev = store.announced([key]).get(key)
         # Announced already, unless a success came after that.
