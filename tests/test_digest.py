@@ -103,10 +103,19 @@ def test_a_banner_for_a_sync_that_never_succeeded(store, cfg):
 def test_previous_working_day_skips_the_weekend():
     plus_one = timezone(timedelta(hours=1))
     monday, tuesday = datetime(2026, 11, 30, 9, tzinfo=plus_one), datetime(2026, 11, 24, 9, tzinfo=plus_one)
-    assert previous_working_day(monday) == datetime(2026, 11, 27, tzinfo=plus_one)
-    assert previous_working_day(tuesday) == datetime(2026, 11, 23, tzinfo=plus_one)
-    assert previous_working_day(datetime(2026, 11, 28, 9, tzinfo=plus_one)) == datetime(2026, 11, 27, tzinfo=plus_one)
-    assert previous_working_day(datetime(2026, 11, 29, 9, tzinfo=plus_one)) == datetime(2026, 11, 27, tzinfo=plus_one)
+    assert previous_working_day(monday, plus_one) == datetime(2026, 11, 27, tzinfo=plus_one)
+    assert previous_working_day(tuesday, plus_one) == datetime(2026, 11, 23, tzinfo=plus_one)
+    for weekend_day in (28, 29):
+        now = datetime(2026, 11, weekend_day, 9, tzinfo=plus_one)
+        assert previous_working_day(now, plus_one) == datetime(2026, 11, 27, tzinfo=plus_one)
+
+
+def test_previous_working_day_starts_at_midnight_across_a_dst_change():
+    from zoneinfo import ZoneInfo
+
+    ny = ZoneInfo("America/New_York")  # summer time from Sunday 8 March 2026
+    since = previous_working_day(datetime(2026, 3, 9, 9, tzinfo=ny), ny)
+    assert since == datetime(2026, 3, 6, tzinfo=ny) and since.utcoffset() == timedelta(hours=-5)
 
 
 def test_mail_group_puts_the_readers_mail_first_and_fyi_noise_last():

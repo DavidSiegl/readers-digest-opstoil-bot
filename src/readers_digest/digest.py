@@ -189,15 +189,18 @@ def format_digest(d: Digest, tz: tzinfo | None = None) -> str:
     return "\n".join(out)
 
 
-def previous_working_day(now: datetime) -> datetime:
-    """Midnight starting the working day before `now`'s, in now's zone: the default `since`.
+def previous_working_day(now: datetime, tz: tzinfo | None = None) -> datetime:
+    """Midnight starting the working day before `now`'s, in `tz` (None: the local zone): the default `since`.
 
     Covers yesterday and today, and on a Monday reaches back to Friday.
+    Midnight takes the offset it has on that day, which differs from now's
+    across a change to or from summer time.
     """
-    d = now.date() - timedelta(days=1)
+    d = now.astimezone(tz).date() - timedelta(days=1)
     while d.weekday() >= 5:
         d -= timedelta(days=1)
-    return datetime.combine(d, time(0), tzinfo=now.tzinfo)
+    midnight = datetime.combine(d, time(0))
+    return midnight.replace(tzinfo=tz) if tz is not None else midnight.astimezone()
 
 
 def _banner(what: str, data_from: str, st: RunStatus, t: Callable[[datetime], str]) -> list[str]:
