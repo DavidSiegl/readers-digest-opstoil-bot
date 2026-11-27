@@ -119,6 +119,9 @@ git clone https://github.com/DavidSiegl/readers-digest-opstoil-bot.git && cd rea
 uv tool install .            # or: pipx install .
 ```
 
+Or install the wheel attached to a [release](https://github.com/DavidSiegl/readers-digest-opstoil-bot/releases):
+`uv tool install ./readers_digest_opstoil_bot-<version>-py3-none-any.whl`.
+
 With Teams:
 
 ```sh
@@ -265,6 +268,17 @@ uv run ruff check src tests
 
 [ARCHITECTURE.md](ARCHITECTURE.md) explains how it is put together, and
 [TODO.md](TODO.md) what it does not do yet.
+
+To release, raise `version` in `pyproject.toml`, commit, then tag that
+commit `v` plus the version and push the tag:
+
+```sh
+git tag -a v0.2.0 -m "readers-digest 0.2.0" && git push origin v0.2.0
+```
+
+The release workflow tests the tagged commit, checks the tag matches
+`pyproject.toml`, and publishes a GitHub release with the sdist, the wheel
+and notes made from the commits since the previous tag.
 
 ## License
 
