@@ -113,3 +113,28 @@ def test_failed_sync_is_a_banner_and_an_action(store):
     assert any(a.startswith("mail failed") for a in v.actions)
     assert v.title == "Never synced"
     assert model.summary(v).splitlines()[0] == "0 open tickets"
+
+
+def test_code_stamp_changes_when_a_module_is_replaced_added_or_removed(tmp_path):
+    from readers_digest.gui import code_stamp
+
+    (tmp_path / "pkg" / "sub").mkdir(parents=True)
+    (tmp_path / "pkg" / "a.py").write_text("x = 1\n")
+    (tmp_path / "pkg" / "sub" / "b.py").write_text("y = 1\n")
+    first = code_stamp(tmp_path / "pkg")
+    assert first is not None and code_stamp(tmp_path / "pkg") == first
+    (tmp_path / "pkg" / "sub" / "b.py").write_text("y = 22\n")
+    second = code_stamp(tmp_path / "pkg")
+    assert second != first
+    (tmp_path / "pkg" / "c.py").write_text("")
+    assert code_stamp(tmp_path / "pkg") != second
+    (tmp_path / "pkg" / "c.py").unlink()
+    assert code_stamp(tmp_path / "pkg") == second
+
+
+def test_code_stamp_is_none_for_a_package_mid_install(tmp_path):
+    from readers_digest.gui import code_stamp
+
+    assert code_stamp(tmp_path / "gone") is None
+    (tmp_path / "empty").mkdir()
+    assert code_stamp(tmp_path / "empty") is None

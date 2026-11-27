@@ -185,7 +185,8 @@ notifies once per outage.
 Review buttons, links to the tickets, and a copy button for reply drafts.
 Closing it leaves an icon in the tray (a StatusNotifierItem: Waybar, KDE,
 and GNOME with the AppIndicator extension show it), with a dot when
-something new needs you.
+something new needs you. After an upgrade, the window restarts itself on
+the new code once no sync or review is running.
 
 The window needs PyGObject, GTK 4 and libadwaita from your distribution:
 

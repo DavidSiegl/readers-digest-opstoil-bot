@@ -10,6 +10,7 @@ bus, which only this user's processes can reach.
 """
 
 import argparse
+import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -25,7 +26,7 @@ from readers_digest import EXIT_FAILED, __version__, failure_line  # noqa: E402
 from readers_digest import config as config_  # noqa: E402
 from readers_digest.config import Config, ConfigError  # noqa: E402
 from readers_digest.digest import collect, previous_working_day  # noqa: E402
-from readers_digest.gui import model  # noqa: E402
+from readers_digest.gui import code_stamp, model  # noqa: E402
 from readers_digest.gui.tray import Tray  # noqa: E402
 from readers_digest.store import Store, default_path  # noqa: E402
 
@@ -96,6 +97,10 @@ class Window(Adw.ApplicationWindow):
         self.actions: frozenset[str] = frozenset()
         self.seen: frozenset[str] = frozenset()
         self.summary = ""
+        # The package's files (code_stamp) as this process loaded them, and
+        # as the last tick found them: an install replaces them under the
+        # window, which keeps running the old code until it restarts.
+        self.code_started = self.code_seen = code_stamp()
 
         self.stack = Adw.ViewStack()
         self.toasts = Adw.ToastOverlay()
@@ -167,8 +172,16 @@ class Window(Adw.ApplicationWindow):
         return True
 
     def _tick(self) -> bool:
-        # Not in the middle of a run: its reload follows when it ends.
+        # Not in the middle of a run: its reload follows when it ends, and a
+        # restart would lose its result.
         if self.running is None:
+            # Restart once an install has replaced the code and then left it
+            # alone for a tick, so a half-written package is never started.
+            # The old code would refuse a db the new one upgraded.
+            code = code_stamp()
+            if code is not None and code != self.code_started and code == self.code_seen:
+                self.get_application().restart()
+            self.code_seen = code
             self.reload()
         return GLib.SOURCE_CONTINUE
 
@@ -485,6 +498,24 @@ class App(Adw.Application):
             self.hidden = False
             return
         win.present()
+
+    def restart(self) -> None:
+        """Replace this process with the window the code now installed draws, shown or hidden as it is now.
+
+        If that cannot start, the window stays as it was, without its tray
+        icon, and a toast says why.
+        """
+        win = self.get_active_window()
+        hidden = win is None or not win.get_visible()
+        argv = [sys.executable, "-m", "readers_digest.gui", "--cli-python", self.opts.cli[0],
+                "--config", str(self.opts.config), "--db", str(self.opts.db), *(["--hidden"] if hidden else [])]
+        if self.tray is not None:
+            self.tray.close()
+        try:
+            os.execv(sys.executable, argv)
+        except OSError as e:
+            if win is not None:
+                win.toast(f"cannot restart into the new install: {e}", timeout=0)
 
     def _window(self) -> Window:
         # Hidden in the tray, the window still exists: closing only hides it.
