@@ -1,0 +1,11 @@
+[Unit]
+Description=Run readers-digest every 30 minutes on weekdays
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 07..18:00/30
+RandomizedDelaySec=2min
+# Catch up once after the machine was asleep or off at a scheduled time.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

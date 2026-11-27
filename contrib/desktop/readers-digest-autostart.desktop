@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Reader's Digest Bot (tray)
+Comment=Start the digest window hidden in the tray at login
+Exec=readers-digest gui --hidden
+Icon=readers-digest
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

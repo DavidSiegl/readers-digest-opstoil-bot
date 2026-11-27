@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Reader's Digest Bot
+Comment=Open tickets, new mail and unread Teams chats
+# A launcher's PATH may not contain ~/.local/bin: if the entry does nothing,
+# put the full path here (README.md, "The window").
+Exec=readers-digest gui
+Icon=readers-digest
+Terminal=false
+Categories=Office;Email;
+# The window's application id (gui/window.py APP_ID), so the dock groups it under this entry.
+StartupWMClass=io.github.readers_digest_bot.ReadersDigest

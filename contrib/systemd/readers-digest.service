@@ -1,0 +1,14 @@
+[Unit]
+Description=Read new mail (and Teams chats, if enabled), then write the digest and notify
+
+[Service]
+Type=oneshot
+# "-": a failed sync must not skip show, which is what reports the failure
+# (a banner in digest.md and one desktop notification per outage).
+ExecStart=-%h/.local/bin/readers-digest sync
+# Optional: tag the new mail with [review] command. It sends that mail's
+# text to whatever the command talks to (README.md, "Review").
+#ExecStart=-%h/.local/bin/readers-digest review --quiet
+ExecStart=%h/.local/bin/readers-digest show --notify --quiet
+# A first sync of a large folder can take minutes; this ends a hang.
+TimeoutStartSec=30min

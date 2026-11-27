@@ -1,0 +1,108 @@
+# readers-digest configuration. Copy to ~/.config/readers-digest/config.toml
+# and edit. Every key not marked "required" can be left out; the value shown
+# is its default. An unknown key is an error, so a typo stops the run.
+
+# ---------------------------------------------------------------------------
+# Mail accounts. One [[account]] per IMAP login; each has one or more folders.
+# The tool only reads: it never sets a flag, moves or deletes a mail.
+
+[[account]]
+name = "work"                       # required; shown in the digest. Renaming it re-reads the backfill.
+host = "imap.example.com"           # required
+# port = 993                        # 993 for ssl, 143 otherwise
+# security = "ssl"                  # "ssl", "starttls", or "plain" (only to localhost, e.g. a local gateway)
+user = "alex@example.com"           # required
+# required: run without a shell; the first line it prints is the password.
+password_command = ["pass", "show", "mail/work"]
+# password_command = ["secret-tool", "lookup", "service", "imap", "user", "alex@example.com"]
+
+# A "tickets" folder holds only ticket notifications: a mail no rule matches
+# is counted as unparsed (and its subject shown in the digest's footer).
+[[account.folder]]
+name = "Tickets"
+role = "tickets"
+
+# A "mail" folder holds anything: a mail no rule matches is listed as new
+# mail, with its text kept for retention_days, for `review`.
+[[account.folder]]
+name = "INBOX"
+role = "mail"
+
+# ---------------------------------------------------------------------------
+# Subject rules: how a notification's subject names the ticket. Tried in
+# order; the first that matches wins. Named groups in `subject`:
+#   (?P<ticket>…)    required: the ticket's id
+#   (?P<title>…)     its title
+#   (?P<state>…)     its state after this mail
+#   (?P<category>…)  its queue, component or project, for [digest] focus
+# Patterns are Python regular expressions, matched case-insensitively.
+# In TOML, write them in '…' (literal strings) so backslashes stay as they are.
+# Try a rule with: readers-digest match "the subject" --from sender@example.com
+
+# A Jira-like tracker: "[JIRA] (OPS-1234) Disk full on db01" and
+# "[JIRA] Updates for OPS-1234: Disk full on db01 - status changed to Done".
+[[rule]]
+name = "jira-created"
+subject = '^\[JIRA\] \((?P<ticket>(?P<category>[A-Z][A-Z0-9]+)-\d+)\) (?P<title>.+)$'
+state = "Open"
+url = "https://jira.example.com/browse/{ticket}"
+
+[[rule]]
+name = "jira-update"
+subject = '^\[JIRA\] Updates for (?P<ticket>(?P<category>[A-Z][A-Z0-9]+)-\d+): (?P<title>.+?)(?: - status changed to (?P<state>.+))?$'
+url = "https://jira.example.com/browse/{ticket}"
+
+# A helpdesk that nags: "Reminder: request #48213 is still open".
+[[rule]]
+name = "helpdesk-reminder"
+subject = '^Reminder: request #(?P<ticket>\d+) is still open'
+sender = '@helpdesk\.example\.com$'  # matched against the sender's address too
+kind = "reminder"                    # counted, never changes the state
+category = "Helpdesk"
+url = "https://helpdesk.example.com/requests/{ticket}"
+
+# The same helpdesk's state changes: "Request #48213 (Printer jammed): In progress".
+[[rule]]
+name = "helpdesk"
+subject = '^Request #(?P<ticket>\d+) \((?P<title>.*)\): (?P<state>.+)$'
+sender = '@helpdesk\.example\.com$'
+category = "Helpdesk"
+url = "https://helpdesk.example.com/requests/{ticket}"
+
+# ---------------------------------------------------------------------------
+[sync]
+# backfill_days = 30      # days a folder's first sync reads
+# overlap_days = 2        # days every sync re-reads, in case the server renumbered
+# retention_days = 7      # days a mail's or chat message's text is kept
+# max_body_bytes = 5000000
+# max_body_chars = 100000
+# timeout_s = 120
+
+[digest]
+# stale_days = 5          # open with no mail this long: listed as stale
+# window_days = 14        # open with no mail this long: no longer listed, only counted
+# Only tickets whose category this finds (or whose category is unknown) are
+# shown, unless `show --all`. Leave it out to show every ticket.
+focus = '^(OPS|Helpdesk)$'
+# closed_states = ["closed", "done", "resolved"]
+# The order of the open states' groups; others follow by name.
+state_order = ["Open", "In Progress", "Waiting for customer"]
+
+[review]
+# The review sends your new mail and unread chats to this command, prompt on
+# stdin, answer on stdout. Whatever it talks to sees that text: pick one you
+# may send your mail to. Leave it out and review is off.
+# command = ["llm", "-m", "some-model", "--no-log"]
+# command = ["ollama", "run", "llama3.1"]
+reader = "Alex Example"                       # who the mail is for, as mail names them
+about = "Alex runs the database team's on-call and owns the backup service."
+# draft_language = "English"
+# timeout_s = 300
+
+[teams]
+# Read Microsoft Teams chats too (pip/uv extra `teams`, then `readers-digest teams-login`).
+# enabled = false
+# account = "alex@example.com"   # clicked on Microsoft's account picker
+# proxy = "http://proxy.example.com:3128"   # default: $HTTPS_PROXY, else none
+# locale = "en-GB"
+# timezone = "Europe/London"

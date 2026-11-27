@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- readers-digest.svg with a dot: something new waits for the reader. -->
+  <path d="M14 6h26l12 12v38a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" fill="#f6f5f4" stroke="#3d3846" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M40 6v12h12" fill="#deddda" stroke="#3d3846" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="19" y="22" width="26" height="6" rx="1.5" fill="#1c71d8"/>
+  <g stroke="#5e5c64" stroke-width="3" stroke-linecap="round">
+    <line x1="20" y1="35" x2="44" y2="35"/>
+    <line x1="20" y1="42" x2="44" y2="42"/>
+    <line x1="20" y1="49" x2="36" y2="49"/>
+  </g>
+  <circle cx="50" cy="50" r="11" fill="#e01b24" stroke="#ffffff" stroke-width="3"/>
+</svg>

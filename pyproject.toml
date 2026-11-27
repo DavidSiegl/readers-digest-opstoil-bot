@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "readers-digest-bot"
+version = "0.1.0"
+description = "A daily digest of your open tickets and new mail, read from IMAP without changing a thing"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+# Standard library only. The window needs PyGObject, GTK 4 and libadwaita
+# from the system's packages (README, "The window").
+dependencies = []
+classifiers = [
+    "Environment :: Console",
+    "Environment :: X11 Applications :: GTK",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Email",
+]
+
+[project.optional-dependencies]
+# Reading Teams chats through a browser profile of the tool's own; after
+# installing, `playwright install chromium` fetches the browser.
+teams = ["playwright>=1.40"]
+
+[project.scripts]
+readers-digest = "readers_digest.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/readers_digest"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
