@@ -3,7 +3,7 @@
        alt="A little bot in reading glasses, reading its digest">
 </p>
 
-# readers-digest-opstoil-bot
+# A Reader's Digest Opstoil Bot
 
 A daily digest of your open tickets, new mail and unread Teams chats,
 triaged by a language model of your choice, and read without changing a
@@ -19,11 +19,11 @@ The rest of your mail and your unread Teams chats go to a model review.
 Connect any language model you can run as a command, local or hosted, and
 it reads each new mail and chat and tags it with who has to act (you, your
 team or nobody), what it is (request, question, alert, FYI or noise), a
-one-line summary, and for mail to you a reply draft. The digest then puts
-what needs you first and FYI and noise last, and `review.md` lists every
-entry with its summary and draft. The review is off until you name the
-command, so nothing leaves your machine before you choose where it goes
-(see [Review](#review)).
+one-line summary, and for whatever asks you for an answer a reply draft.
+The digest then puts the mail that needs you first and FYI and noise
+last, and `review.md` lists every entry with its summary and draft. The
+review is off until you name the command, so nothing leaves your machine
+before you choose where it goes (see [Review](#review)).
 
 ```markdown
 # Tickets in focus, 2026-11-27 12:01
@@ -56,6 +56,7 @@ command, so nothing leaves your machine before you choose where it goes
 FYI / noise (1):
 
 - 2026-11-27 06:30 · [nobody · fyi] · Facilities · Lift maintenance on Friday
+  - The lifts are out of service on Friday morning.
 
 ---
 
@@ -67,7 +68,7 @@ And the model review's own page, `review.md`:
 ```markdown
 # Review, 2026-11-27 12:01
 
-3 new entries since 2026-11-26 00:00.
+2 new entries since 2026-11-26 00:00.
 
 > Written by a language model from text other people wrote. Check it against the source before acting.
 
@@ -79,9 +80,9 @@ And the model review's own page, `review.md`:
 
   > Hi Sam, I'll go through the restore test log this morning and get back to you before 15:00.
 
-## For the team (1)
+## For the team (0)
 
-- **Teams, On-call: Robin Example** · alert — Replication lag on db03 has been above five minutes since 07:40.
+None.
 
 ## Nothing to do (1)
 
