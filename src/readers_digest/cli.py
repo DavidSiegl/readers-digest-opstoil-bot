@@ -23,6 +23,9 @@ from readers_digest.teams import commands as teams_cmds
 
 # How long a sync waits for another one (the timer's, or the window's) to end.
 SYNC_WAIT_S = 10 * 60
+# How long a review waits for another one: a review sends every batch to the
+# model in turn, each up to [review] timeout_s.
+REVIEW_WAIT_S = 30 * 60
 # The window needs PyGObject. A uv tool's venv usually runs on a Python the
 # distribution's python3-gi was not built for, so `gui` falls back to
 # starting the window on the system's own Python (gui()).
@@ -95,22 +98,35 @@ def main(argv: list[str] | None = None) -> int:
 
     with Store(db, cfg.rules) as store:
         if args.command == "sync":
-            try:
-                with lock.held(lock.path("sync"), SYNC_WAIT_S, lambda s: print(f"readers-digest: sync {s}",
-                                                                               file=sys.stderr)):
-                    code = sync(store, cfg, args.rescan)
-                    if cfg.teams.enabled and not args.no_teams:
-                        code = max(code, teams_cmds.sync(store, db, cfg.teams))
-            except lock.Busy as e:
-                print(f"readers-digest: sync {e}", file=sys.stderr)
-                return EXIT_FAILED
+            def sync_all() -> int:
+                code = sync(store, cfg, args.rescan)
+                if cfg.teams.enabled and not args.no_teams:
+                    code = max(code, teams_cmds.sync(store, db, cfg.teams))
+                return code
+
+            code = _locked("sync", SYNC_WAIT_S, sync_all)
             store.expire_text(datetime.now(UTC) - timedelta(days=cfg.sync.retention_days))
             return code
         if args.command == "show":
             return show(store, cfg, db.parent / "digest.md", args.since, not args.all, args.notify, args.quiet)
         if args.command == "review":
-            return review(store, cfg, db.parent / "review.md", args.since, args.quiet)
+            # Two reviews at once would send the same mail to the model twice.
+            return _locked("review", REVIEW_WAIT_S,
+                           lambda: review(store, cfg, db.parent / "review.md", args.since, args.quiet))
         return prune(store, args.days, args.dry_run)
+
+
+def _locked(name: str, wait_s: float, run: Callable[[], int]) -> int:
+    """The exit status of `run()`, run holding lock `name` (lock.path); EXIT_FAILED, not run, if it stays busy.
+
+    Waits up to `wait_s` seconds for another run holding it, saying so on stderr.
+    """
+    try:
+        with lock.held(lock.path(name), wait_s, lambda s: print(f"readers-digest: {name} {s}", file=sys.stderr)):
+            return run()
+    except lock.Busy as e:
+        print(f"readers-digest: {name} {e}", file=sys.stderr)
+        return EXIT_FAILED
 
 
 def sync(store: Store, cfg: Config, rescan: bool = False) -> int:

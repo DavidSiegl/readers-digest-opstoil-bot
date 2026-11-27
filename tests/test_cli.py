@@ -75,3 +75,16 @@ def test_gui_without_gi_execs_the_system_python(home, monkeypatch):
     assert argv[-1] == "--hidden" and str(home / "config.toml") in argv
     gui_path = env["PYTHONPATH"].split(os.pathsep)[0]
     assert gui_path.startswith(str(home)) and os.path.islink(os.path.join(gui_path, "readers_digest"))
+
+
+def test_review_waits_for_another_review_and_gives_up_without_sending(home, capsys, monkeypatch):
+    """Two reviews at once would send the same mail text to the model twice."""
+    from readers_digest import lock, review
+
+    monkeypatch.setattr(cli, "REVIEW_WAIT_S", 0)
+    sent = []
+    monkeypatch.setattr(review, "review", lambda *a, **k: sent.append(a) or ("", 0))
+    with lock.held(lock.path("review"), 0, lambda s: None):
+        assert main(home, "review", "--quiet") == 1
+    assert sent == []
+    assert "review still in use" in capsys.readouterr().err
