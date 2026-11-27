@@ -290,6 +290,10 @@ class Store:
         self.close()
 
     def _upgrade(self) -> None:
+        # Most opens find nothing to do. Checked without the write lock, so
+        # the window does not wait on a sync's long transaction to learn that.
+        if self._current():
+            return
         with self._transaction():
             version = self.con.execute("PRAGMA user_version").fetchone()[0]
             if version > SCHEMA_VERSION:
@@ -302,6 +306,13 @@ class Store:
             stored = self.con.execute("SELECT value FROM meta WHERE key = 'rules'").fetchone()
             if stored is None or stored[0] != self.rules.fingerprint:
                 self._rematch()
+
+    def _current(self) -> bool:
+        """The schema is this version's and the messages were matched with self.rules."""
+        if self.con.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
+            return False
+        stored = self.con.execute("SELECT value FROM meta WHERE key = 'rules'").fetchone()
+        return stored is not None and stored[0] == self.rules.fingerprint
 
     def _rematch(self) -> None:
         """Match every stored subject with self.rules and refold every ticket. Inside a transaction."""

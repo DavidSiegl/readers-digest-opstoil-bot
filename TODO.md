@@ -23,6 +23,13 @@ Features a fuller version could have; none is started.
 
 ## Open issues
 
+- **The window can still wait on a large sync.** Opening the state db
+  takes no write lock when it is current, but SQLite's rollback journal
+  makes readers wait while a writer whose changes outgrew its page cache
+  holds the exclusive lock: a backfill or `sync --rescan` of a big
+  folder can freeze the window for up to the 30 s busy timeout. Closed by
+  reading in the window off the GTK main loop, or by WAL with its `-wal`
+  and `-shm` files made owner-only like the db.
 - **A rejected IMAP login is tried again next run.** `SourceError`
   carries `login_rejected`, but nothing reads it: the timer and the
   window's Sync button run the password command and LOGIN on every sync,

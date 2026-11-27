@@ -163,3 +163,17 @@ def test_opening_leaves_a_db_dir_chosen_with_db_alone(cfg, tmp_path):
     with Store(d / "state.db", cfg.rules):
         pass
     assert os.stat(d).st_mode & 0o777 == 0o755
+
+
+def test_opening_an_up_to_date_db_does_not_wait_for_a_writer(store, cfg):
+    import threading
+
+    writer = sqlite3.connect(store.path, isolation_level=None)
+    writer.execute("BEGIN IMMEDIATE")
+    opened = []
+    t = threading.Thread(target=lambda: opened.append(Store(store.path, cfg.rules).close()), daemon=True)
+    t.start()
+    t.join(5)
+    writer.execute("ROLLBACK")
+    writer.close()
+    assert opened, "opening waited for the writer's lock"
