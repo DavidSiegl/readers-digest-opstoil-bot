@@ -7,7 +7,7 @@ one line it prints for a failure that stopped it.
 from importlib.metadata import PackageNotFoundError, version
 
 try:
-    __version__ = version("readers-digest-bot")
+    __version__ = version("readers-digest-opstoil-bot")
 except PackageNotFoundError:  # run from a checkout that was never installed
     __version__ = "0+unknown"
 

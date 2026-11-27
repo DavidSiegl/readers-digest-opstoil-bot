@@ -30,9 +30,9 @@ from readers_digest.gui.tray import Tray  # noqa: E402
 from readers_digest.store import Store, default_path  # noqa: E402
 
 # Reverse-DNS id of the application; whoever publishes the tool should put their own namespace here.
-APP_ID = "io.github.readers_digest_bot.ReadersDigest"
+APP_ID = "io.github.DavidSiegl.ToilDigest"
 ICON_NAME = "readers-digest"
-APP_NAME = "Reader's Digest Bot"
+APP_NAME = "Toil Digest"
 ICON_DIR = Path(__file__).parent / "icons"
 # The timer may sync in the background; the db is cheap to read again.
 RELOAD_S = 60

@@ -1,4 +1,4 @@
-# readers-digest-bot
+# readers-digest-opstoil-bot
 
 A daily digest of your open tickets, new mail and unread Teams chats, read
 without changing a thing in your mailbox.
@@ -44,7 +44,7 @@ summary and a reply draft.
 Last successful sync: 2026-11-27 12:01 · Unparsed subjects: 0
 ```
 
-It is a command-line tool with an optional GTK window and tray icon. The
+It is a command-line tool with an optional GTK window and tray icon, called Toil Digest. The
 core needs nothing but the standard library of Python 3.12 or later.
 
 ## What it never does
@@ -68,7 +68,7 @@ mail and of chat messages for `retention_days` (default 7).
 ## Install
 
 ```sh
-git clone <this repository> && cd readers-digest-bot
+git clone <this repository> && cd readers-digest-opstoil-bot
 uv tool install .            # or: pipx install .
 ```
 
@@ -76,7 +76,7 @@ With Teams:
 
 ```sh
 uv tool install '.[teams]'
-~/.local/share/uv/tools/readers-digest-bot/bin/playwright install chromium
+~/.local/share/uv/tools/readers-digest-opstoil-bot/bin/playwright install chromium
 ```
 
 ## Configure
@@ -195,7 +195,7 @@ When the tool's own Python cannot import them, `gui` runs the window on
 `/usr/bin/python3`. For a launcher entry and its icon:
 
 ```sh
-cp contrib/desktop/io.github.readers_digest_bot.ReadersDigest.desktop ~/.local/share/applications/
+cp contrib/desktop/io.github.DavidSiegl.ToilDigest.desktop ~/.local/share/applications/
 mkdir -p ~/.local/share/icons/hicolor/scalable/apps
 cp src/readers_digest/gui/icons/readers-digest.svg ~/.local/share/icons/hicolor/scalable/apps/
 # To start hidden in the tray at login:
