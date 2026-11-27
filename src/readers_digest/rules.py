@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass
 from email.utils import parseaddr
 from enum import StrEnum
+from urllib.parse import quote
 
 
 class Kind(StrEnum):
@@ -100,9 +101,14 @@ class Rules:
         return None
 
     def url(self, rule: str, ticket: str) -> str | None:
-        """The web page of `ticket`, read by the rule named `rule`; None when that rule has no url or is gone."""
+        """The web page of `ticket`, read by the rule named `rule`; None when that rule has no url or is gone.
+
+        `ticket` comes from a subject someone else wrote, so it is
+        percent-encoded: it can fill in one path segment or query value, never
+        change the rest of the URL.
+        """
         r = next((r for r in self.rules if r.name == rule), None)
-        return None if r is None or r.url is None else r.url.replace("{ticket}", ticket)
+        return None if r is None or r.url is None else r.url.replace("{ticket}", quote(ticket, safe=""))
 
     @property
     def fingerprint(self) -> str:

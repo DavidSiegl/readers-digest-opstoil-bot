@@ -37,6 +37,8 @@ role = "mail"
 #   (?P<category>…)  its queue, component or project, for [digest] focus
 # Patterns are Python regular expressions, matched case-insensitively.
 # In TOML, write them in '…' (literal strings) so backslashes stay as they are.
+# `url`, optional: the ticket's web page, with {ticket} replaced by its id,
+# percent-encoded (a "/" in it becomes %2F).
 # Try a rule with: readers-digest match "the subject" --from sender@example.com
 
 # Jira: "[JIRA] (OPS-1234) Disk full on db01", and when it batches a ticket's

@@ -47,6 +47,11 @@ def test_url_fills_in_the_ticket():
     assert rules.url("gone", "T-1") is None
 
 
+def test_url_percent_encodes_the_ticket_so_a_subject_cannot_pick_the_path_or_end_a_link():
+    rules = Rules([rule(url="https://t.example/browse/{ticket}")])
+    assert rules.url("r", "../admin?x=1#> [y](z") == "https://t.example/browse/..%2Fadmin%3Fx%3D1%23%3E%20%5By%5D%28z"
+
+
 def test_fingerprint_changes_with_what_matching_depends_on_only():
     base = Rules([rule()]).fingerprint
     assert Rules([rule()]).fingerprint == base
