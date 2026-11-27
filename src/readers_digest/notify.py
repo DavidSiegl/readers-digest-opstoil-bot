@@ -5,12 +5,13 @@ and a failing source once per outage, so a server that is down all day does
 not raise a popup on every run. What has been announced is kept in the store.
 """
 
+import html
 import subprocess
 from collections.abc import Callable
 from datetime import datetime
 
 from readers_digest.config import Config
-from readers_digest.digest import collect
+from readers_digest.digest import clean, collect
 from readers_digest.store import Source, Store
 from readers_digest.teams.chat import review_key, to_me
 
@@ -63,9 +64,12 @@ def _list(names: list[str], what: str) -> str:
 
 
 def send(line: str, run: Callable = subprocess.run) -> None:
-    """Show `line` as a desktop notification; raises NotifyError."""
+    """Show `line` as a desktop notification, on one line and as plain text; raises NotifyError."""
+    # Notification servers read the body as markup, and `line` quotes chat
+    # titles and server errors.
+    body = html.escape(clean(line), quote=False)
     try:
-        p = run(["notify-send", "--app-name=readers-digest", "readers-digest", line], capture_output=True, text=True,
+        p = run(["notify-send", "--app-name=readers-digest", "readers-digest", body], capture_output=True, text=True,
                 timeout=30)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise NotifyError(f"cannot run notify-send: {e}") from e

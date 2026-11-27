@@ -1,6 +1,8 @@
+import subprocess
+
 from conftest import at, mail, make_config
 
-from readers_digest.notify import decide
+from readers_digest.notify import decide, send
 from readers_digest.store import Source
 from readers_digest.teams.chat import Conversation, Message
 
@@ -56,3 +58,10 @@ def test_teams_is_not_announced_when_teams_is_off(store, cfg):
     store.record_teams([Conversation("dm", "1:1", "", at(3), unread=True)],
                        [Message("dm", "1", at(2), "8:orgid:bob", "Bob", "ping", False, False)])
     assert decide(store, cfg, at(1), at(3)) == (None, [])
+
+
+def test_send_escapes_markup_and_keeps_the_line_on_one_line():
+    argv = []
+    send("Teams: 1 chat for you (<b>URGENT</b>\n& more)", run=lambda a, **kw: argv.extend(a) or
+         subprocess.CompletedProcess(a, 0, "", ""))
+    assert argv[-1] == "Teams: 1 chat for you (&lt;b&gt;URGENT&lt;/b&gt; &amp; more)"
